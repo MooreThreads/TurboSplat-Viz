@@ -8,16 +8,16 @@
 
 #if _WIN32
 	#ifdef DLLIMPORT
-		#define LIB_API __declspec(dllimport)
+		#define LAUNCH_MODULE_API __declspec(dllimport)
 	#else
-		#define LIB_API __declspec(dllexport)
+		#define LAUNCH_MODULE_API __declspec(dllexport)
 	#endif
 #else
-#define LIB_API extern
+#define LAUNCH_MODULE_API extern
 #endif
 
 
-class LIB_API ScreenSplash
+class LAUNCH_MODULE_API ScreenSplash
 {
 private:
 	HWND m_hwnd;
@@ -29,7 +29,9 @@ private:
 public:
 	ScreenSplash(int H, int W);
 	void Show(HINSTANCE hInstance, int nCmdShow);
-	HWND GetHwnd() { return m_hwnd; };
+	HWND GetHwnd() const { return m_hwnd; }
+	int GetHeight() const { return m_height; }
+	int GetWidth() const { return m_width; }
 	static ScreenSplash* GetInst();
 	void Close();
 	~ScreenSplash();

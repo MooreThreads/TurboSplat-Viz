@@ -1,15 +1,16 @@
-#include"render_threads_pool.h"
+#include"scene_render.h"
+#include<memory>
 
 class MainLoop
 {
 private:
 	int m_frame_counter;
-	RenderThreadsPool m_render_thread_pool;
+	std::unique_ptr<SceneRender> m_scene_render;
 
-	void render_init();
+	void render_init(HWND hwnd, int h, int w);
 	void draw();
 public:
 	MainLoop();
-	void init();
+	void init(HWND hwnd, int h, int w);
 	void loop();
 };

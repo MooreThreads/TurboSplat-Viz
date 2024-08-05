@@ -1,3 +1,4 @@
+#pragma once
 #include <wrl.h>
 #include <d3d12.h>
 #include <dxgi1_6.h>
@@ -10,6 +11,7 @@ private:
 	Microsoft::WRL::ComPtr<ID3D12Device> m_device;
 	Microsoft::WRL::ComPtr<ID3D12CommandQueue> m_commandQueue;
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> m_rootSignature;
+	Microsoft::WRL::ComPtr<ID3D12Fence> m_fence;
 public:
 	static const int kBufferCount=3;
 
