@@ -5,18 +5,19 @@
 
 class D3dResources
 {
+
+
 private:
-	//d3d resource
-	Microsoft::WRL::ComPtr<IDXGISwapChain3> m_swapChain;
 	Microsoft::WRL::ComPtr<ID3D12Device> m_device;
-	Microsoft::WRL::ComPtr<ID3D12CommandQueue> m_commandQueue;
-	Microsoft::WRL::ComPtr<ID3D12RootSignature> m_rootSignature;
-	Microsoft::WRL::ComPtr<ID3D12Fence> m_fence;
+	Microsoft::WRL::ComPtr<IDXGIFactory4> m_factory;
+	Microsoft::WRL::ComPtr<IDXGIAdapter1> m_hardware_adapter;
+	static D3dResources* GetInst();
 public:
-	static const int kBufferCount=3;
+	static const int SWAPCHAIN_BUFFERCOUNT = 3;
+	D3dResources();
+	void Init();
+	static Microsoft::WRL::ComPtr<ID3D12Device> GetDevice();
+	static Microsoft::WRL::ComPtr<IDXGIFactory4> GetFactory();
+	static Microsoft::WRL::ComPtr<IDXGIAdapter1> GetHardwareAdapter();
 
-	D3dResources(HWND hwnd,int h,int w);
-	Microsoft::WRL::ComPtr<ID3D12Device> GetDevice() { return m_device; }
-	Microsoft::WRL::ComPtr<ID3D12CommandQueue> GetCommandQueue() { return m_commandQueue; }
 };
-

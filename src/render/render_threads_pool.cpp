@@ -18,11 +18,6 @@ bool RenderThreadsPool::PopRenderTask(RenderTask& task)
 	return false;
 }
 
-RenderThreadsPool* RenderThreadsPool::GetInst()
-{
-	static RenderThreadsPool inst;
-	return &inst;
-}
 
 RenderThreadsPool::RenderThreadsPool():m_task_queue(), m_threads(), m_backqueue_index(0), ready_num(0), finish_num(0),b_init(false), d3d_resource(nullptr)
 {
@@ -44,20 +39,30 @@ bool RenderThreadsPool::IsInitialized() const
 	return b_init;
 }
 
-void RenderThreadsPool::Init(int threadsnum, HWND hwnd, int h, int w)
+void RenderThreadsPool::Init(int threadsnum, Microsoft::WRL::ComPtr<ID3D12CommandQueue> command_queue)
 {
 	assert(IsRenderThread()==false);
-	if (b_init == false)
+
+	if (b_init == true)
 	{
-		assert(m_threads.size() == 0);
-		d3d_resource = std::make_shared<D3dResources>(hwnd, h, w);
 		for (int i = 0; i < threadsnum; i++)
 		{
-			m_threads.emplace_back(d3d_resource);
-			m_threads[i].Run();
+			m_threads[i].Stop();
+			m_threads[i].Join();
 		}
-		b_init = true;
+		m_threads.clear();
 	}
+
+	assert(m_threads.size() == 0);
+	for (int i = 0; i < threadsnum; i++)
+	{
+		m_threads.emplace_back(command_queue, shared_from_this());
+	}
+	for (int i = 0; i < threadsnum; i++)
+	{
+		m_threads[i].Run();
+	}
+	b_init = true;
 }
 
 bool RenderThreadsPool::IsRenderThread() const

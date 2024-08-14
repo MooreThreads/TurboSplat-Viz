@@ -1,16 +1,33 @@
-#include"scene_render.h"
+#include"viewport_info.h"
+#include"world.h"
 #include<memory>
+#include<vector>
+
+class Viewport
+{
+private:
+	ViewportInfo m_info;
+	std::shared_ptr<World> m_world;
+public:
+	Viewport(ViewportInfo info, std::shared_ptr<World> World);
+	ViewportInfo GetInfo() const { return m_info; }
+	void Draw(int frame_count);
+};
 
 class MainLoop
 {
 private:
+	std::vector<Viewport> m_viewports;
+	ViewportInfo m_gameclient_viewport;
+	std::shared_ptr<World> m_game_world;
 	int m_frame_counter;
-	std::unique_ptr<SceneRender> m_scene_render;
-
-	void render_init(HWND hwnd, int h, int w);
-	void draw();
+	
+	void CreateGameClientViewport();
+	void RenderInit();
+	void GameInit();
 public:
 	MainLoop();
-	void init(HWND hwnd, int h, int w);
-	void loop();
+	
+	void Init();
+	void Loop();
 };

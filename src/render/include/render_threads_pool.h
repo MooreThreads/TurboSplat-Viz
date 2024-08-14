@@ -9,12 +9,11 @@
 #include <dxgi1_6.h>
 #include <D3Dcompiler.h>
 #include <set>
-#include "dll_helper.h"
 #include"render_thread.h"
 #include"d3d_resources.h"
 
 
-class RENDER_MODULE_API RenderThreadsPool
+class RenderThreadsPool:public std::enable_shared_from_this< RenderThreadsPool>
 {
 private:
 	std::queue<RenderTask> m_task_queue[2];//todo lock free queue
@@ -35,15 +34,13 @@ public:
 	std::atomic<int> ready_num;
 	std::atomic<int> finish_num;
 	std::shared_ptr<D3dResources> d3d_resource;
-	
-	static RenderThreadsPool* GetInst();
 
 	int GetThreadsNum() const { return m_threads.size(); }
 	bool IsRenderThread() const;
 	void RegisterRenderThread(std::thread::id new_threadid);
 	void UnregisterRenderThread(std::thread::id threadid);
 
-	void Init(int threadsnum, HWND hwnd, int h, int w);
+	void Init(int threadsnum, Microsoft::WRL::ComPtr<ID3D12CommandQueue> command_queue);
 	bool IsInitialized() const;
 
 	void EnqueueRenderTask(RenderTask func);

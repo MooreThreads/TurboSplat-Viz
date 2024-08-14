@@ -3,21 +3,23 @@
 #include"d3d_helper.h"
 #include<assert.h>
 
-RenderThread::RenderThread(std::shared_ptr<D3dResources> resource):m_d3dresource(resource), m_cur_allocator_index(0), m_stop(true)
+RenderThread::RenderThread(Microsoft::WRL::ComPtr<ID3D12CommandQueue> command_queue, std::shared_ptr<RenderThreadsPool> threadpool): 
+	m_cur_allocator_index(0), m_stop(true),m_command_queue_ref(command_queue),m_threadpool(threadpool)
 {
+	auto device = D3dResources::GetDevice();
 	//init allocator and commmind list
-	for(int i=0;i<D3dResources::kBufferCount;i++)
-		ThrowIfFailed(m_d3dresource->GetDevice()->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_command_allocator[i])));
-	ThrowIfFailed(m_d3dresource->GetDevice()->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_command_allocator[0].Get(), nullptr, IID_PPV_ARGS(&m_command_list)));
+	for(int i=0;i<D3dResources::SWAPCHAIN_BUFFERCOUNT;i++)
+		ThrowIfFailed(device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_command_allocator[i])));
+	ThrowIfFailed(device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_command_allocator[0].Get(), nullptr, IID_PPV_ARGS(&m_command_list)));
+	ThrowIfFailed(m_command_list->Close());
 }
 
 
 RenderThread::RenderThread(RenderThread&& other) noexcept
 {
-	m_d3dresource = other.m_d3dresource;
 	m_cur_allocator_index = other.m_cur_allocator_index;
 	m_stop = other.m_stop.load();
-	for (int i = 0; i < D3dResources::kBufferCount; i++)
+	for (int i = 0; i < D3dResources::SWAPCHAIN_BUFFERCOUNT; i++)
 	{
 		m_command_allocator[i] = other.m_command_allocator[i];
 	}
@@ -31,15 +33,20 @@ RenderThread::~RenderThread()
 		m_thread.join();
 }
 
-void RenderThread::WaitTaskQueueReady()
+bool RenderThread::WaitTaskQueueReady()
 {
-	RenderThreadsPool* pool = RenderThreadsPool::GetInst();
-	std::unique_lock<std::mutex> lg(pool->mutex);
-	while (pool->ready_num <= 0)
+	std::shared_ptr<RenderThreadsPool> pool = m_threadpool.lock();
+	if (pool)
 	{
-		pool->renderthread_queue_ready.wait(lg);
+		std::unique_lock<std::mutex> lg(pool->mutex);
+		while (pool->ready_num <= 0)
+		{
+			pool->renderthread_queue_ready.wait(lg);
+		}
+		pool->ready_num.fetch_add(-1);
+		return true;
 	}
-	pool->ready_num.fetch_add(-1);
+	return false;
 }
 
 void RenderThread::FrameInit()
@@ -52,13 +59,15 @@ void RenderThread::FrameFinish()
 {
 	ThrowIfFailed(m_command_list->Close());
 	ID3D12CommandList* ppCommandLists[] = { m_command_list.Get() };
-	m_d3dresource->GetCommandQueue()->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
+	//auto command_queue = D3dResources::GetInst()->GetCommandQueue();
+	m_command_queue_ref->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 
-	m_cur_allocator_index = (m_cur_allocator_index + 1) % D3dResources::kBufferCount;
-	int result = RenderThreadsPool::GetInst()->finish_num.fetch_add(1);
-	if (result + 1 == RenderThreadsPool::GetInst()->GetThreadsNum())
+	std::shared_ptr<RenderThreadsPool> pool = m_threadpool.lock();
+	m_cur_allocator_index = (m_cur_allocator_index + 1) % D3dResources::SWAPCHAIN_BUFFERCOUNT;
+	int result = pool->finish_num.fetch_add(1);
+	if (result + 1 == pool->GetThreadsNum())
 	{
-		RenderThreadsPool::GetInst()->renderthread_finished.notify_all();
+		pool->renderthread_finished.notify_all();
 	}
 
 }
@@ -75,17 +84,26 @@ void RenderThread::Stop()
 	m_stop = true;
 }
 
+void RenderThread::Join()
+{
+	m_thread.join();
+}
+
 void RenderThread::ThreadRun_Internel()
 {
 	//todo assert render thread
 
-	RenderThreadsPool* pool = RenderThreadsPool::GetInst();
+	std::shared_ptr<RenderThreadsPool> pool = m_threadpool.lock();
+	if (pool == nullptr)
+	{
+		//!!!weak_ptr error when multithread!!!
+		assert(false);
+	}
 	pool->RegisterRenderThread(std::this_thread::get_id());
 
 	while (m_stop==false)
 	{
-		WaitTaskQueueReady();
-		if (m_stop == true)
+		if (WaitTaskQueueReady()==false||m_stop == true)
 		{
 			break;
 		}
@@ -94,7 +112,7 @@ void RenderThread::ThreadRun_Internel()
 		RenderTask task;
 		while (pool->PopRenderTask(task)&& m_stop==false)
 		{
-			task(m_command_list, m_command_allocator[m_cur_allocator_index]);
+			task(m_command_list);
 		}
 		FrameFinish();
 	}
