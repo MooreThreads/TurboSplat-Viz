@@ -2,23 +2,43 @@
 #include<memory>
 #include "render_dll_helper.h"
 #include"DirectXMath.h"
+#include "d3d_resources.h"
+#include "view_info.h"
 class ShadingModel;
 class RENDER_MODULE_API RenderProxy
 {
-private:
-	virtual void InitRenderResources()=0;
+	
 public:
 	std::shared_ptr<ShadingModel> shading_model;
-	DirectX::FXMMATRIX world_transform;
+	DirectX::XMMATRIX world_transform;
 	std::shared_ptr<unsigned char> custom_data;
+	bool b_render_resources_inited;
 
-	virtual void PopulateCommandList()=0;
+	virtual void PopulateCommandList(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list,const ViewInfo& view,int buffer_index)=0;
+	virtual void InitRenderResources()=0;
+	virtual void UploadStatic()=0;
+	virtual void UploadDynamic(int game_frame) = 0;
 };
+
 
 class RENDER_MODULE_API ScreenTriangleRenderProxy:public RenderProxy
 {
-private:
-	virtual void InitRenderResources();
 public:
-	virtual void PopulateCommandList();
+	struct Vertex
+	{
+		DirectX::XMFLOAT3 position;
+		DirectX::XMFLOAT4 color;
+	};
+	struct DeviceStaticResource
+	{
+		Microsoft::WRL::ComPtr<ID3D12Resource> m_vertex_buffer;
+		D3D12_VERTEX_BUFFER_VIEW m_vertex_buffer_view;
+	};
+public:
+	std::vector<Vertex> vertex;
+	std::unique_ptr<DeviceStaticResource> device_static_resource;
+	virtual void PopulateCommandList(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list,const ViewInfo& view, int buffer_index);
+	virtual void InitRenderResources();
+	virtual void UploadStatic();
+	virtual void UploadDynamic(int game_frame);
 };

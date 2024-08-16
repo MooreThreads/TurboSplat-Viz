@@ -3,6 +3,9 @@
 #include<d3dcompiler.h>
 #include "d3dx12.h"
 #include<assert.h>
+#include"DirectXMath.h"
+#include "view_info.h"
+#include "render_proxy.h"
 //#include <stdexcept>
 
 ScreenTriangleShadingModel::ScreenTriangleShadingModel():ShadingModel()
@@ -87,6 +90,11 @@ void ScreenTriangleShadingModel::PopulateCommandList(Microsoft::WRL::ComPtr<ID3D
 	return;
 }
 
+void ScreenTriangleShadingModel::SetRootSignatures(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list, int buffer_index, const ViewInfo* p_view, const RenderProxy* p_render_proxy)
+{
+
+}
+
 
 
 BasicMeshShadingModel::BasicMeshShadingModel():ScreenTriangleShadingModel()
@@ -101,13 +109,17 @@ void BasicMeshShadingModel::InitShader()
 #else
 	UINT compileFlags = 0;
 #endif
-	ThrowIfFailed(D3DCompileFromFile(L"./shader/shaders.hlsl", nullptr, nullptr, "VSMain", "vs_5_0", compileFlags, 0, &m_vertex_shader, nullptr));
-	ThrowIfFailed(D3DCompileFromFile(L"./shader/shaders.hlsl", nullptr, nullptr, "PSMain", "ps_5_0", compileFlags, 0, &m_pixel_shader, nullptr));
+	ThrowIfFailed(D3DCompileFromFile(L"./shader/triangle/shaders.hlsl", nullptr, nullptr, "VSMain", "vs_5_0", compileFlags, 0, &m_vertex_shader, nullptr));
+	ThrowIfFailed(D3DCompileFromFile(L"./shader/triangle/shaders.hlsl", nullptr, nullptr, "PSMain", "ps_5_0", compileFlags, 0, &m_pixel_shader, nullptr));
 }
 void BasicMeshShadingModel::InitRootSignature()
 {
+	CD3DX12_ROOT_PARAMETER rootParameters[2];
+	rootParameters[ViewCBufferIndex].InitAsConstants(sizeof(ViewBuffer) / 4, 0, 0, D3D12_SHADER_VISIBILITY_VERTEX);
+	rootParameters[BatchCBufferIndex].InitAsConstants(sizeof(BatchBuffer) / 4, 1, 0, D3D12_SHADER_VISIBILITY_VERTEX);
+
 	CD3DX12_ROOT_SIGNATURE_DESC rootSignatureDesc;
-	rootSignatureDesc.Init(0, nullptr, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+	rootSignatureDesc.Init(_countof(rootParameters), rootParameters, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 	Microsoft::WRL::ComPtr<ID3DBlob> serialized_signature_desc;
 	Microsoft::WRL::ComPtr<ID3DBlob> error;
 	ThrowIfFailed(D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &serialized_signature_desc, &error));
@@ -118,7 +130,16 @@ void BasicMeshShadingModel::InitRootSignature()
 	}
 }
 
-void BasicMeshShadingModel::PopulateCommandList(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list, int buffer_index)
+void BasicMeshShadingModel::SetRootSignatures(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list, int buffer_index,const ViewInfo* p_view, const RenderProxy* p_render_proxy)
 {
-	assert(false);//todo
+	ViewBuffer view_buffer;
+	view_buffer.view_transform = p_view->view_matrix;
+	view_buffer.project_transform = p_view->project_matrix;
+	BatchBuffer batch_buffer;
+	batch_buffer.world_transform = p_render_proxy->world_transform;
+
+	command_list->SetGraphicsRoot32BitConstants(ViewCBufferIndex, sizeof(ViewBuffer) / 4, &view_buffer, 0);
+	command_list->SetGraphicsRoot32BitConstants(BatchCBufferIndex, sizeof(BatchBuffer) / 4, &batch_buffer, 0);
+
+	return;
 }

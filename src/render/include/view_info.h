@@ -6,8 +6,9 @@
 #include "scene.h"
 struct ViewInfo
 {
-	DirectX::FXMMATRIX view_matrix;
-	DirectX::FXMMATRIX project_matrix;
-	Microsoft::WRL::ComPtr<ID3D12Resource> render_target;
+	DirectX::XMMATRIX view_matrix;
+	DirectX::XMMATRIX project_matrix;
 	CD3DX12_CPU_DESCRIPTOR_HANDLE render_target_view;
+	CD3DX12_VIEWPORT m_viewport;
+	CD3DX12_RECT m_scissor_rect;
 };

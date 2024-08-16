@@ -59,7 +59,6 @@ void RenderThread::FrameFinish()
 {
 	ThrowIfFailed(m_command_list->Close());
 	ID3D12CommandList* ppCommandLists[] = { m_command_list.Get() };
-	//auto command_queue = D3dResources::GetInst()->GetCommandQueue();
 	m_command_queue_ref->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 
 	std::shared_ptr<RenderThreadsPool> pool = m_threadpool.lock();

@@ -130,3 +130,24 @@ Microsoft::WRL::ComPtr<IDXGIAdapter1> D3dResources::GetHardwareAdapter()
     assert(ret != nullptr);
     return ret;
 }
+
+
+D3dDescriptorHeapHelper::D3dDescriptorHeapHelper():m_descriptor_size(0)
+{
+
+}
+void D3dDescriptorHeapHelper::Init(D3D12_DESCRIPTOR_HEAP_DESC desc)
+{
+    ThrowIfFailed(D3dResources::GetDevice()->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_heap)));
+    m_descriptor_size = D3dResources::GetDevice()->GetDescriptorHandleIncrementSize(desc.Type);
+}
+CD3DX12_CPU_DESCRIPTOR_HANDLE D3dDescriptorHeapHelper::Get(int index)
+{
+    CD3DX12_CPU_DESCRIPTOR_HANDLE ret(m_heap->GetCPUDescriptorHandleForHeapStart(), index, m_descriptor_size);
+    return ret;
+}
+
+CD3DX12_CPU_DESCRIPTOR_HANDLE D3dDescriptorHeapHelper::operator[](int index)
+{
+    return Get(index);
+}

@@ -21,7 +21,12 @@ private:
 	Microsoft::WRL::ComPtr<ID3D12Fence> m_fence;
 	HANDLE m_fence_event[D3dResources::SWAPCHAIN_BUFFERCOUNT];
 	Microsoft::WRL::ComPtr<IDXGISwapChain3> m_swap_chain;
+	Microsoft::WRL::ComPtr<ID3D12Resource> m_swap_chain_buffer[D3dResources::SWAPCHAIN_BUFFERCOUNT];
+	int m_back_buffer_offset;
 	Microsoft::WRL::ComPtr<ID3D12CommandQueue> m_command_queue;
+	Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> m_command_list;
+	Microsoft::WRL::ComPtr<ID3D12CommandAllocator> m_command_allocator[D3dResources::SWAPCHAIN_BUFFERCOUNT];
+	D3dDescriptorHeapHelper m_rtv_heap;
 
 	void InitD3dResource();
 	void CreateSwapChain();
@@ -29,8 +34,13 @@ private:
 
 	virtual void GPU_SYNC(int game_frame);
 
-	virtual void RenderViewInternel(Scene& scene, const ViewInfo& view);
-	virtual void RenderObjInternel(const std::shared_ptr<RenderProxy>& proxy, const ViewInfo& view);
+	virtual void RenderViewInternel(Scene& scene, const ViewInfo& view,int game_frame);
+	virtual void RenderObjInternel(const std::shared_ptr<RenderProxy>& proxy, const ViewInfo& view, int game_frame);
+	void InitSwapChainBuffer();
+	virtual void FrameInitCPU(int game_frame);
+	virtual void FrameFinishCPU(int game_frame);
+	virtual void FrameInitCommandQueue(int game_frame);
+	virtual void FrameFinishCommandQueue(int game_frame);
 public:
 	SceneRenderer(ViewportInfo viewport_infos);
 	virtual void Render(int game_frame);

@@ -1,8 +1,12 @@
-cbuffer mvp_buffer : register(b1)
+cbuffer view_cbuffer : register(b0)
 {
-	float4x4 world_transform;
 	float4x4 view_transform;
 	float4x4 project_transform;
+}
+
+cbuffer batch_cbuffer : register(b1)
+{
+    float4x4 world_transform;
 }
 
 struct vs_in

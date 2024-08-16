@@ -9,9 +9,9 @@ bool RenderThreadsPool::PopRenderTask(RenderTask& task)
 {
 	assert(IsRenderThread());
 	int front_queue_index = (m_backqueue_index + 1) % 2;
-	if (m_task_queue->empty() == false)
+	if (m_task_queue[front_queue_index].empty() == false)
 	{
-		auto task = m_task_queue[front_queue_index].front();
+		task = m_task_queue[front_queue_index].front();
 		m_task_queue[front_queue_index].pop();
 		return true;
 	}
@@ -98,6 +98,9 @@ void RenderThreadsPool::WaitRenderThreadFinish()
 		renderthread_finished.wait(lg);
 	}
 	finish_num = 0;
+
+	int front_queue_index = (m_backqueue_index + 1) % 2;
+	assert(m_task_queue[front_queue_index].empty());
 }
 
 void RenderThreadsPool::SwapTaskQueue()
@@ -106,8 +109,8 @@ void RenderThreadsPool::SwapTaskQueue()
 	assert(m_threads.size() != 0);
 
 	std::lock_guard<std::mutex> lockgard(mutex);
-	assert(m_task_queue[m_backqueue_index].empty());
 	m_backqueue_index = (m_backqueue_index + 1) % 2;
+	assert(m_task_queue[m_backqueue_index].empty());
 	ready_num = m_threads.size();
 	renderthread_queue_ready.notify_all();
 }
