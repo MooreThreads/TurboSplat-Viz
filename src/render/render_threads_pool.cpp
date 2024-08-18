@@ -22,16 +22,24 @@ bool RenderThreadsPool::PopRenderTask(RenderTask& task)
 RenderThreadsPool::RenderThreadsPool():m_task_queue(), m_threads(), m_backqueue_index(0), ready_num(0), finish_num(0),b_init(false), d3d_resource(nullptr)
 {
 }
-RenderThreadsPool::~RenderThreadsPool()
+
+void RenderThreadsPool::Close()
 {
-	for (auto& thread:m_threads)
+	assert(IsRenderThread() == false);
+	for (auto& thread : m_threads)
 	{
 		thread.Stop();
 	}
 	renderthread_queue_ready.notify_all();
 	m_threads.clear();
-
-
+	b_init = false;
+}
+RenderThreadsPool::~RenderThreadsPool()
+{
+	if (b_init)
+	{
+		Close();
+	}
 }
 
 bool RenderThreadsPool::IsInitialized() const

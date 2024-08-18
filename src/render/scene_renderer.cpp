@@ -125,6 +125,7 @@ void SceneRenderer::InitThreadsPool()
 {
     m_render_threadspool = std::make_shared<RenderThreadsPool>();
     m_render_threadspool->Init(THREADS_NUM,m_command_queue);
+    return;
 }
 
 void SceneRenderer::CreateSwapChain()
@@ -245,4 +246,10 @@ void SceneRenderer::Update(const Scene& game_scene, ViewportInfo viewport_info, 
         m_viewport_info.views.push_back(view);
     }
     
+}
+
+SceneRenderer::~SceneRenderer()
+{
+    m_render_threadspool->Close();
+    return;
 }

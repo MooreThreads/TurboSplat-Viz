@@ -66,6 +66,7 @@ void ScreenSplash::internel_MainLoop(HINSTANCE hInstance, int nCmdShow)
             DispatchMessage(&msg);
         }
     }
+    m_window_close_callback();
     return;
 }
 
@@ -75,6 +76,11 @@ void ScreenSplash::Show(HINSTANCE hInstance, int nCmdShow)
     using namespace std::chrono_literals;
     std::this_thread::sleep_for(500ms);
     return;
+}
+
+void ScreenSplash::RegisterWindowCloseCallback(std::function<void()> callback)
+{
+    m_window_close_callback = callback;
 }
 
 void ScreenSplash::Close()

@@ -63,10 +63,13 @@ void RenderThread::FrameFinish()
 
 	std::shared_ptr<RenderThreadsPool> pool = m_threadpool.lock();
 	m_cur_allocator_index = (m_cur_allocator_index + 1) % D3dResources::SWAPCHAIN_BUFFERCOUNT;
-	int result = pool->finish_num.fetch_add(1);
-	if (result + 1 == pool->GetThreadsNum())
 	{
-		pool->renderthread_finished.notify_all();
+		std::unique_lock<std::mutex> lg(pool->mutex);
+		int result = pool->finish_num.fetch_add(1);
+		if (result + 1 == pool->GetThreadsNum())
+		{
+			pool->renderthread_finished.notify_all();
+		}
 	}
 
 }

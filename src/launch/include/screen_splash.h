@@ -15,7 +15,7 @@
 #else
 #define LAUNCH_MODULE_API extern
 #endif
-
+#include<functional>
 
 class LAUNCH_MODULE_API ScreenSplash
 {
@@ -26,6 +26,7 @@ private:
 	std::thread m_thread;
 	static LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 	void internel_MainLoop(HINSTANCE hInstance, int nCmdShow);
+	std::function<void()> m_window_close_callback;
 public:
 	ScreenSplash(int H, int W);
 	void Show(HINSTANCE hInstance, int nCmdShow);
@@ -34,5 +35,6 @@ public:
 	int GetWidth() const { return m_width; }
 	static ScreenSplash* GetInst();
 	void Close();
+	void RegisterWindowCloseCallback(std::function<void()> callback);
 	~ScreenSplash();
 };

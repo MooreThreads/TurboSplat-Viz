@@ -26,6 +26,7 @@ std::shared_ptr<SceneRenderer> RendererModule::GetSceneRenderer(WorldId world_id
 void RendererModule::RemoveSceneRenderer(WorldId world_id, HWND hwnd)
 {
 	m_renderer_map.erase(CreateRendererID(world_id, hwnd));
+	return;
 }
 void RendererModule::CreateSceneRenderer(WorldId world_id, ViewportInfo viewport_infos)
 {

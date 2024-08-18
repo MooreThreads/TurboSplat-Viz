@@ -42,6 +42,7 @@ public:
 
 	void Init(int threadsnum, Microsoft::WRL::ComPtr<ID3D12CommandQueue> command_queue);
 	bool IsInitialized() const;
+	void Close();
 
 	void EnqueueRenderTask(RenderTask func);
 	bool PopRenderTask(RenderTask& task);

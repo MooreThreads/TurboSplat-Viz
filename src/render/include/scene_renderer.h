@@ -43,6 +43,7 @@ private:
 	virtual void FrameFinishCommandQueue(int game_frame);
 public:
 	SceneRenderer(ViewportInfo viewport_infos);
+	~SceneRenderer();
 	virtual void Render(int game_frame);
 	void Update(const Scene& game_scene ,ViewportInfo viewport_info,int game_frame);
 };

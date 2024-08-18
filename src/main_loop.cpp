@@ -55,7 +55,8 @@ void MainLoop::Init()
 
 void MainLoop::Loop()
 {
-	while (true)
+	b_loop = true;
+	while (b_loop)
 	{
 		//if gamethread exit or renderthread crash
 		//exit
@@ -75,6 +76,20 @@ void MainLoop::Loop()
 
 		//check window close
 
+	}
+	return;
+}
+
+void MainLoop::Stop()
+{
+	b_loop = false;
+}
+
+MainLoop::~MainLoop()
+{
+	for (auto& viewport : m_viewports)
+	{
+		RendererModule::GetInst()->UnregisterViewportAndWolrd(m_game_world->GetId(), m_viewports[0].GetInfo());
 	}
 	return;
 }

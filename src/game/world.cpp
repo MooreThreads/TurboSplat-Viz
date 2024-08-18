@@ -97,7 +97,5 @@ TestWorld::TestWorld():World()
 void TestWorld::Init()
 {
 	//create objs
-	// 
-	//AddObject()
 	AddObjectInternel(std::make_shared<SceneObject>(shared_from_this()));
 }

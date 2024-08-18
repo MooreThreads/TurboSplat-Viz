@@ -2,6 +2,7 @@
 #include"world.h"
 #include<memory>
 #include<vector>
+#include<atomic>
 
 class Viewport
 {
@@ -21,13 +22,16 @@ private:
 	ViewportInfo m_gameclient_viewport;
 	std::shared_ptr<World> m_game_world;
 	int m_frame_counter;
+	std::atomic<bool> b_loop;
 	
 	void CreateGameClientViewport();
 	void RenderInit();
 	void GameInit();
 public:
 	MainLoop();
+	~MainLoop();
 	
 	void Init();
 	void Loop();
+	void Stop();
 };
