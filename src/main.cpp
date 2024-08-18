@@ -2,6 +2,7 @@
 #include "screen_splash.h"
 #include "main_loop.h"
 #include<memory>
+#include "agility_sdk.h"
 
 int WinMain(HINSTANCE hinst, HINSTANCE hprev,LPSTR cmdline,int show)
 {
