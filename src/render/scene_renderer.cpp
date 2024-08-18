@@ -89,6 +89,7 @@ void SceneRenderer::FrameFinishCommandQueue(int game_frame)
 void SceneRenderer::Render(int game_frame)
 {
     //render views t frame
+    m_cur_cpu_frame = game_frame;
     FrameInitCPU(game_frame);
     for (auto& view : m_viewport_info.views)
     {
@@ -250,6 +251,10 @@ void SceneRenderer::Update(const Scene& game_scene, ViewportInfo viewport_info, 
 
 SceneRenderer::~SceneRenderer()
 {
+    m_render_threadspool->WaitRenderThreadFinish();
+    ThrowIfFailed(m_command_queue->Signal(m_fence.Get(), m_cur_cpu_frame));
+    ThrowIfFailed(m_fence->SetEventOnCompletion(m_cur_cpu_frame, m_fence_event[m_cur_cpu_frame % D3dResources::SWAPCHAIN_BUFFERCOUNT]));
+    GPU_SYNC(m_cur_cpu_frame);
     m_render_threadspool->Close();
     return;
 }

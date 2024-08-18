@@ -27,6 +27,7 @@ private:
 	Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> m_command_list;
 	Microsoft::WRL::ComPtr<ID3D12CommandAllocator> m_command_allocator[D3dResources::SWAPCHAIN_BUFFERCOUNT];
 	D3dDescriptorHeapHelper m_rtv_heap;
+	int m_cur_cpu_frame;
 
 	void InitD3dResource();
 	void CreateSwapChain();

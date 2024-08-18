@@ -26,11 +26,19 @@ RenderThreadsPool::RenderThreadsPool():m_task_queue(), m_threads(), m_backqueue_
 void RenderThreadsPool::Close()
 {
 	assert(IsRenderThread() == false);
+	//mark stop
 	for (auto& thread : m_threads)
 	{
 		thread.Stop();
 	}
-	renderthread_queue_ready.notify_all();
+
+	//awake threads
+	{
+		std::lock_guard<std::mutex> lockgard(mutex);
+		ready_num = m_threads.size();
+		renderthread_queue_ready.notify_all();
+	}
+
 	m_threads.clear();
 	b_init = false;
 }
