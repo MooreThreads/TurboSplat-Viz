@@ -23,6 +23,7 @@ inline void ThrowIfFailed(HRESULT hr)
 {
     if (FAILED(hr))
     {
-        throw HrException(hr);
+        HrException exception_obj(hr);
+        throw exception_obj;
     }
 }

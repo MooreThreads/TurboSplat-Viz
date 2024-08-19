@@ -20,12 +20,38 @@ void World::AddObjectInternel(std::shared_ptr<Object> obj)
 
 void World::RemoveObjectInternel(ObjId id)
 {
-	m_objs.erase(id);
+	if (m_objs.find(id) != m_objs.end())
+	{
+		m_objs.erase(id);
+	}
+	else if (m_cameras.find(id) != m_cameras.end())
+	{
+		DetachCamera(id);
+	}
+}
+
+void World::AttachCamera(std::shared_ptr<Camera> camera)
+{
+	m_cameras[camera->GetId()] = camera;
+}
+
+void World::DetachCamera(ObjId id)
+{
+	m_cameras.erase(id);
 }
 
 void World::AddObject(std::shared_ptr<Object> obj)
 {
-	m_new_objs[obj->GetId()] = obj;
+	
+	std::shared_ptr<Camera> camera = std::dynamic_pointer_cast<Camera>(obj);
+	if (camera)
+	{
+		AttachCamera(camera);
+	}
+	else
+	{
+		m_new_objs[obj->GetId()] = obj;
+	}
 }
 
 void World::RemoveObject(ObjId id)
@@ -59,7 +85,7 @@ void World::Tick(int cur_frame, int duration)
 	m_new_objs.clear();
 }
 
-void World::DoRenderUpdates()
+void World::DoRenderUpdates(ViewportInfo& viewport_info)
 {
 	//reset scene
 	m_scene->ClearTemporal();
@@ -76,6 +102,20 @@ void World::DoRenderUpdates()
 				scene_obj->DoRenderUpdate();
 			}
 		}
+	}
+
+	viewport_info.views.clear();
+	for (auto id_and_camera : m_cameras)
+	{
+		std::shared_ptr<Camera> camera = id_and_camera.second;
+		ViewInfo view;
+		view.m_viewport= CD3DX12_VIEWPORT(0.0f, 0.0f, static_cast<float>(viewport_info.width), static_cast<float>(viewport_info.height));
+		view.m_scissor_rect = CD3DX12_RECT(0, 0, static_cast<LONG>(viewport_info.width), static_cast<LONG>(viewport_info.height));
+		view.view_matrix = camera->GetViewMatrix();
+		view.project_matrix = camera->GetProjectMatrix(viewport_info.width, viewport_info.height);
+		view.render_target_view = CD3DX12_CPU_DESCRIPTOR_HANDLE();
+
+		viewport_info.views.push_back(view);
 	}
 }
 
@@ -97,5 +137,8 @@ TestWorld::TestWorld():World()
 void TestWorld::Init()
 {
 	//create objs
-	AddObjectInternel(std::make_shared<SceneObject>(shared_from_this()));
+	auto obj=std::make_shared<StaticMesh>(shared_from_this(), DirectX::XMFLOAT3{0.0f,0.0f,1.0f}, DirectX::XMFLOAT3{1.0f,1.0f,1.0f}, DirectX::XMFLOAT3{0.0f,0.0f,0.0f});
+	obj->Init();
+	auto camera = std::make_shared<Camera>(shared_from_this(), 90,0.1,100, DirectX::XMFLOAT3{ 0,0,0 }, DirectX::XMFLOAT3{ 0,0,0 });
+	camera->Init();
 }

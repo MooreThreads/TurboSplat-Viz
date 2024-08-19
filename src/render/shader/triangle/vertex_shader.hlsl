@@ -1,3 +1,4 @@
+#include"vs_header.hlsli"
 cbuffer view_cbuffer : register(b0)
 {
 	float4x4 view_transform;
@@ -9,20 +10,8 @@ cbuffer batch_cbuffer : register(b1)
     float4x4 world_transform;
 }
 
-struct vs_in
-{
-    float3 position : POSITIONT;
-    float4 color : COLOR;
-};
 
-struct vs_out
-{
-    float4 position : SV_Position;
-    float4 color : COLOR;
-};
-
-
-vs_out vertex_shader(vs_in input)
+vs_out VSMain(vs_in input)
 {
     vs_out output;
 	

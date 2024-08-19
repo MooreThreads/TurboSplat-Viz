@@ -109,8 +109,11 @@ void BasicMeshShadingModel::InitShader()
 #else
 	UINT compileFlags = 0;
 #endif
-	ThrowIfFailed(D3DCompileFromFile(L"./shader/triangle/shaders.hlsl", nullptr, nullptr, "VSMain", "vs_5_0", compileFlags, 0, &m_vertex_shader, nullptr));
-	ThrowIfFailed(D3DCompileFromFile(L"./shader/triangle/shaders.hlsl", nullptr, nullptr, "PSMain", "ps_5_0", compileFlags, 0, &m_pixel_shader, nullptr));
+	Microsoft::WRL::ComPtr<ID3DBlob> errorBlob = nullptr;
+	HRESULT vs_result = D3DCompileFromFile(L"./shader/triangle/vertex_shader.hlsl", nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, "VSMain", "vs_5_0", compileFlags, 0, &m_vertex_shader, &errorBlob);
+	CheckShaderCompile(vs_result, errorBlob);
+	HRESULT ps_result = D3DCompileFromFile(L"./shader/triangle/pixel_shader.hlsl", nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, "PSMain", "ps_5_0", compileFlags, 0, &m_pixel_shader, &errorBlob);
+	CheckShaderCompile(ps_result, errorBlob);
 }
 void BasicMeshShadingModel::InitRootSignature()
 {
@@ -132,6 +135,11 @@ void BasicMeshShadingModel::InitRootSignature()
 
 void BasicMeshShadingModel::SetRootSignatures(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list, int buffer_index,const ViewInfo* p_view, const RenderProxy* p_render_proxy)
 {
+	//p.s. 
+	//		CPU						HLSL
+	// row major			-> column major
+	// vec_x matmul mat_T	-> mat_T matmul vec_x
+	// so we do not need to do anything
 	ViewBuffer view_buffer;
 	view_buffer.view_transform = p_view->view_matrix;
 	view_buffer.project_transform = p_view->project_matrix;

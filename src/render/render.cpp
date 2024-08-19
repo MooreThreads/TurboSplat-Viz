@@ -68,6 +68,7 @@ void RendererModule::InitShaders()
 {
 	m_shading_model.clear();
 	RegisterShader<ScreenTriangleShadingModel>(m_shading_model);
+	RegisterShader<BasicMeshShadingModel>(m_shading_model);
 	
 }
 

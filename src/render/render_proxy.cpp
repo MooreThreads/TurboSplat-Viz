@@ -2,7 +2,7 @@
 #include "d3d_helper.h"
 #include "shading_model.h"
 
-void ScreenTriangleRenderProxy::InitRenderResources()
+void TriangleRenderProxy::InitRenderResources()
 {
 	assert(device_static_resource ==nullptr);
     assert(b_render_resources_inited == false);
@@ -24,11 +24,11 @@ void ScreenTriangleRenderProxy::InitRenderResources()
     b_render_resources_inited = true;
     return;
 }
-void ScreenTriangleRenderProxy::UploadDynamic(int game_frame)
+void TriangleRenderProxy::UploadDynamic(int game_frame)
 {
     return;
 }
-void ScreenTriangleRenderProxy::UploadStatic()
+void TriangleRenderProxy::UploadStatic()
 {
     UINT8* pVertexDataBegin;
     CD3DX12_RANGE readRange(0, 0);        // We do not intend to read from this resource on the CPU.
@@ -38,7 +38,7 @@ void ScreenTriangleRenderProxy::UploadStatic()
     return;
 }
 
-void ScreenTriangleRenderProxy::PopulateCommandList(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list, const ViewInfo& view, int buffer_index)
+void TriangleRenderProxy::PopulateCommandList(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list, const ViewInfo& view, int buffer_index)
 {
     assert(device_static_resource != nullptr);
     assert(b_render_resources_inited);

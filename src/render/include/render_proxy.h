@@ -21,7 +21,7 @@ public:
 };
 
 
-class RENDER_MODULE_API ScreenTriangleRenderProxy:public RenderProxy
+class RENDER_MODULE_API TriangleRenderProxy:public RenderProxy
 {
 public:
 	struct Vertex

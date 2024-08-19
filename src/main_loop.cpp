@@ -58,24 +58,16 @@ void MainLoop::Loop()
 	b_loop = true;
 	while (b_loop)
 	{
-		//if gamethread exit or renderthread crash
-		//exit
-
-		//gamethread tick
-		m_game_world->Tick(m_frame_counter,1);
-		m_game_world->DoRenderUpdates();
-
-		//viewport draw
 		for (auto& viewport : m_viewports)
 		{
+			//gamethread tick
+			auto cur_world=viewport.GetWorld();
+			cur_world->Tick(m_frame_counter, 1);
+			cur_world->DoRenderUpdates(viewport.GetInfoRef());
+
 			viewport.Draw(m_frame_counter);
 		}
-
-
 		m_frame_counter++;
-
-		//check window close
-
 	}
 	return;
 }

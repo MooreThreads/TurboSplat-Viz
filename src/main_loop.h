@@ -12,6 +12,8 @@ private:
 public:
 	Viewport(ViewportInfo info, std::shared_ptr<World> World);
 	ViewportInfo GetInfo() const { return m_info; }
+	ViewportInfo& GetInfoRef()  { return m_info; }
+	std::shared_ptr<World> GetWorld() { return m_world; }
 	void Draw(int frame_count);
 };
 
