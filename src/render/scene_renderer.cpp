@@ -32,7 +32,7 @@ void SceneRenderer::RenderObjInternel(const std::shared_ptr<RenderProxy>& proxy,
         //view
         command_list->RSSetViewports(1, &view.m_viewport);
         command_list->RSSetScissorRects(1, &view.m_scissor_rect);
-        command_list->OMSetRenderTargets(1, &view.render_target_view, FALSE, nullptr);
+        command_list->OMSetRenderTargets(1, &view.render_target_view, FALSE, &view.depth_stencil_view);
 
         //IA
         proxy->PopulateCommandList(command_list,view, game_frame % D3dResources::SWAPCHAIN_BUFFERCOUNT);
@@ -69,8 +69,9 @@ void SceneRenderer::FrameInitCommandQueue(int game_frame)
     ThrowIfFailed(m_command_list->Reset(m_command_allocator[game_frame % D3dResources::SWAPCHAIN_BUFFERCOUNT].Get(), nullptr));
     m_command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_swap_chain_buffer[game_frame%D3dResources::SWAPCHAIN_BUFFERCOUNT].Get(), 
         D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
-    const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
+    const float clearColor[] = { 0.0f, 0.0f, 0.0f, 1.0f };
     m_command_list->ClearRenderTargetView(m_rtv_heap[game_frame % D3dResources::SWAPCHAIN_BUFFERCOUNT], clearColor, 0, nullptr);
+    m_command_list->ClearDepthStencilView(m_dsv_heap[game_frame % D3dResources::SWAPCHAIN_BUFFERCOUNT], D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
     m_command_list->Close();
     ID3D12CommandList* ppCommandLists[] = { m_command_list.Get() };
     m_command_queue->ExecuteCommandLists(1, ppCommandLists);
@@ -96,6 +97,7 @@ void SceneRenderer::Render(int game_frame)
         if (view.render_target_view.ptr == 0)
         {
             view.render_target_view= m_rtv_heap[game_frame % D3dResources::SWAPCHAIN_BUFFERCOUNT];
+            view.depth_stencil_view = m_dsv_heap[game_frame % D3dResources::SWAPCHAIN_BUFFERCOUNT];
         }
         RenderViewInternel(m_scene_buffer[game_frame % D3dResources::SWAPCHAIN_BUFFERCOUNT], view,game_frame);
     }
@@ -153,7 +155,7 @@ void SceneRenderer::CreateSwapChain()
     ThrowIfFailed(swap_chain.As(&m_swap_chain));
 }
 
-void SceneRenderer::InitSwapChainBuffer()
+void SceneRenderer::InitBuffer()
 {
     // Create descriptor heaps.
     {
@@ -163,12 +165,32 @@ void SceneRenderer::InitSwapChainBuffer()
         rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
         rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
         m_rtv_heap.Init(rtvHeapDesc);
+
+        D3D12_DESCRIPTOR_HEAP_DESC dsvHeapDesc = {}; // Note: DepthStencil View requires storage in a heap even if we are going to use only 1 view
+        dsvHeapDesc.NumDescriptors = D3dResources::SWAPCHAIN_BUFFERCOUNT;
+        dsvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
+        dsvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+        m_dsv_heap.Init(dsvHeapDesc);
+    }
+
+    //create depth stencil buffer
+    int width = m_viewport_info.width;
+    int height = m_viewport_info.height;
+    auto depth_stencil_buffer_desc=CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_D32_FLOAT, width, height, 1, 0, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL);
+    D3D12_CLEAR_VALUE clear_value;
+    clear_value.Format = DXGI_FORMAT_D32_FLOAT;
+    clear_value.DepthStencil.Depth = 1.0f;
+    for (int i = 0; i < D3dResources::SWAPCHAIN_BUFFERCOUNT; i++)
+    {
+        D3dResources::GetDevice()->CreateCommittedResource(&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT), D3D12_HEAP_FLAG_NONE, &depth_stencil_buffer_desc,
+            D3D12_RESOURCE_STATE_DEPTH_WRITE, &clear_value, IID_PPV_ARGS(&m_depthstencil_buffer[i]));
     }
 
     for (int i = 0; i < D3dResources::SWAPCHAIN_BUFFERCOUNT; i++)
     {
         ThrowIfFailed(m_swap_chain->GetBuffer(i, IID_PPV_ARGS(&m_swap_chain_buffer[i])));
         D3dResources::GetDevice()->CreateRenderTargetView(m_swap_chain_buffer[i].Get(), nullptr, m_rtv_heap[i]);
+        D3dResources::GetDevice()->CreateDepthStencilView(m_depthstencil_buffer[i].Get(), nullptr, m_dsv_heap[i]);
     }
 
     m_back_buffer_offset = m_swap_chain->GetCurrentBackBufferIndex();
@@ -200,7 +222,7 @@ void SceneRenderer::InitD3dResource()
     ThrowIfFailed(D3dResources::GetDevice()->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_command_allocator[0].Get(), nullptr, IID_PPV_ARGS(&m_command_list)));
     ThrowIfFailed(m_command_list->Close());
 
-    InitSwapChainBuffer();
+    InitBuffer();
 }
 
 static void SetDefaultView(ViewInfo& view,int width,int height)
@@ -244,6 +266,7 @@ void SceneRenderer::Update(const Scene& game_scene, ViewportInfo viewport_info, 
         ViewInfo view;
         SetDefaultView(view, m_viewport_info.width, m_viewport_info.height);
         view.render_target_view = m_rtv_heap[game_frame % D3dResources::SWAPCHAIN_BUFFERCOUNT];
+        view.depth_stencil_view = m_dsv_heap[game_frame % D3dResources::SWAPCHAIN_BUFFERCOUNT];
         m_viewport_info.views.push_back(view);
     }
     

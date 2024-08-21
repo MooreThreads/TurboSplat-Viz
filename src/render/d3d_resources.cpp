@@ -147,6 +147,12 @@ CD3DX12_CPU_DESCRIPTOR_HANDLE D3dDescriptorHeapHelper::Get(int index)
     return ret;
 }
 
+CD3DX12_GPU_DESCRIPTOR_HANDLE D3dDescriptorHeapHelper::GetGPU(int index)
+{
+    CD3DX12_GPU_DESCRIPTOR_HANDLE ret(m_heap->GetGPUDescriptorHandleForHeapStart(), index, m_descriptor_size);
+    return ret;
+}
+
 CD3DX12_CPU_DESCRIPTOR_HANDLE D3dDescriptorHeapHelper::operator[](int index)
 {
     return Get(index);

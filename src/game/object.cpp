@@ -88,9 +88,27 @@ std::shared_ptr<RenderProxy> SceneObject::CreateRenderProxy()
 	return proxy;
 }
 
+void StaticMesh::GenDefaultData()
+{
+	m_vertex_position.emplace_back(DirectX::XMFLOAT3{ 0.0f,0.25f,0.0f });
+	m_vertex_color.emplace_back(DirectX::XMFLOAT4{ 1.0f, 0.0f, 0.0f, 0.5f });
+	m_vertex_position.emplace_back(DirectX::XMFLOAT3{ 0.25f, -0.25f , 0.0f });
+	m_vertex_color.emplace_back(DirectX::XMFLOAT4{ 0.0f, 1.0f, 0.0f, 0.5f });
+	m_vertex_position.emplace_back(DirectX::XMFLOAT3{ -0.25f, -0.25f , 0.0f });
+	m_vertex_color.emplace_back(DirectX::XMFLOAT4{ 0.0f, 0.0f, 1.0f, 0.5f });
+
+	m_vertex_position.emplace_back(DirectX::XMFLOAT3{ 0.2f,0.25f,-0.2f });
+	m_vertex_color.emplace_back(DirectX::XMFLOAT4{ 1.0f, 0.0f, 0.0f, 0.5f });
+	m_vertex_position.emplace_back(DirectX::XMFLOAT3{ 0.45f, -0.25f , -0.2f });
+	m_vertex_color.emplace_back(DirectX::XMFLOAT4{ 0.0f, 1.0f, 0.0f, 0.5f });
+	m_vertex_position.emplace_back(DirectX::XMFLOAT3{ -0.05f, -0.25f , -0.2f });
+	m_vertex_color.emplace_back(DirectX::XMFLOAT4{ 0.0f, 0.0f, 1.0f, 0.5f });
+}
+
 StaticMesh::StaticMesh(std::shared_ptr<World> world):SceneObject(world)
 {
 	m_shading_model_name = typeid(BasicMeshShadingModel).name();
+	GenDefaultData();
 }
 StaticMesh::StaticMesh(std::shared_ptr<World> world, DirectX::XMFLOAT3 position, DirectX::XMFLOAT3 scale, DirectX::XMFLOAT3 rotation) :
 	SceneObject(world)
@@ -99,4 +117,29 @@ StaticMesh::StaticMesh(std::shared_ptr<World> world, DirectX::XMFLOAT3 position,
 	this->scale = scale;
 	this->rotation = rotation;
 	m_shading_model_name = typeid(BasicMeshShadingModel).name();
+	GenDefaultData();
+}
+
+std::shared_ptr<RenderProxy> StaticMesh::CreateRenderProxy()
+{
+	std::shared_ptr<TriangleRenderProxy> proxy = std::make_shared<TriangleRenderProxy>();
+	for (int i = 0; i < m_vertex_position.size(); i++)
+	{
+		proxy->vertex.emplace_back(TriangleRenderProxy::Vertex{ m_vertex_position[i], m_vertex_color[i]});
+	}
+	proxy->shading_model = RendererModule::GetInst()->GetShadingModelObj(m_shading_model_name);
+	proxy->b_render_resources_inited = false;
+	proxy->device_static_resource.reset();
+	proxy->world_transform = GetWorldTransform();
+	return proxy;
+}
+
+AlphaStaticMesh::AlphaStaticMesh(std::shared_ptr<World> world):StaticMesh(world)
+{
+	m_shading_model_name = typeid(AlphaMeshShadingModel).name();
+}
+
+AlphaStaticMesh::AlphaStaticMesh(std::shared_ptr<World> world, DirectX::XMFLOAT3 position, DirectX::XMFLOAT3 scale, DirectX::XMFLOAT3 rotation) :StaticMesh(world, position, scale, rotation)
+{
+	m_shading_model_name = typeid(AlphaMeshShadingModel).name();
 }

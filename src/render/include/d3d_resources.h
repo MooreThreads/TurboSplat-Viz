@@ -32,5 +32,6 @@ public:
 	D3dDescriptorHeapHelper();
 	void Init(D3D12_DESCRIPTOR_HEAP_DESC desc);
 	CD3DX12_CPU_DESCRIPTOR_HANDLE Get(int index);
+	CD3DX12_GPU_DESCRIPTOR_HANDLE GetGPU(int index);
 	CD3DX12_CPU_DESCRIPTOR_HANDLE operator[](int index);
 };

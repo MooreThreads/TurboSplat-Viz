@@ -25,6 +25,8 @@ protected:
 	virtual void InitShader();
 	virtual void InitRootSignature();
 	void CheckShaderCompile(HRESULT result, Microsoft::WRL::ComPtr<ID3DBlob> error_blob);
+	virtual D3D12_DEPTH_STENCIL_DESC GetDepthStencilDesc();
+	virtual D3D12_BLEND_DESC GetBlendDesc();
 	virtual void InitPSO();
 public:
 	ScreenTriangleShadingModel();
@@ -54,4 +56,19 @@ protected:
 public:
 	BasicMeshShadingModel();
 	virtual void SetRootSignatures(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list, int buffer_index,const ViewInfo* p_view,const RenderProxy* p_render_proxy);
+};
+
+class AlphaMeshShadingModel :public BasicMeshShadingModel
+{
+protected:
+	Microsoft::WRL::ComPtr <ID3D12Resource> m_start_offset_buffer[D3dResources::SWAPCHAIN_BUFFERCOUNT];
+	D3dDescriptorHeapHelper m_start_offset_uav;
+	virtual void InitShader();
+	virtual void InitRootSignature();
+	virtual D3D12_DEPTH_STENCIL_DESC GetDepthStencilDesc();
+	virtual D3D12_BLEND_DESC GetBlendDesc();
+public:
+	const int UAV_Index = 2;
+	AlphaMeshShadingModel();
+	virtual void SetRootSignatures(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list, int buffer_index, const ViewInfo* p_view, const RenderProxy* p_render_proxy);
 };

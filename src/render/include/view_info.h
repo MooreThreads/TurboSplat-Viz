@@ -9,6 +9,7 @@ struct ViewInfo
 	DirectX::XMMATRIX view_matrix;
 	DirectX::XMMATRIX project_matrix;
 	CD3DX12_CPU_DESCRIPTOR_HANDLE render_target_view;
+	CD3DX12_CPU_DESCRIPTOR_HANDLE depth_stencil_view;
 	CD3DX12_VIEWPORT m_viewport;
 	CD3DX12_RECT m_scissor_rect;
 };

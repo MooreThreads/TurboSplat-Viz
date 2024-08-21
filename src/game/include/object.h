@@ -2,6 +2,7 @@
 
 #include<atomic>
 #include<memory>
+#include<vector>
 #include<string>
 #include<DirectXMath.h>
 typedef int ObjId;
@@ -41,13 +42,27 @@ public:
 	std::string m_shading_model_name;
 	SceneObject(std::shared_ptr<World> world);
 	void DoRenderUpdate();
-
+	virtual ~SceneObject() {};
 	
 };
 
 class StaticMesh :public SceneObject
 {
+protected:
+	virtual void GenDefaultData();
 public:
+	std::vector<DirectX::XMFLOAT3> m_vertex_position;
+	std::vector<DirectX::XMFLOAT4> m_vertex_color;
 	StaticMesh(std::shared_ptr<World> world);
 	StaticMesh(std::shared_ptr<World> world, DirectX::XMFLOAT3 position, DirectX::XMFLOAT3 scale, DirectX::XMFLOAT3 rotation);
+	virtual std::shared_ptr<RenderProxy> CreateRenderProxy();
+	virtual ~StaticMesh() {};
+};
+
+class AlphaStaticMesh :public StaticMesh
+{
+public:
+	AlphaStaticMesh(std::shared_ptr<World> world);
+	AlphaStaticMesh(std::shared_ptr<World> world, DirectX::XMFLOAT3 position, DirectX::XMFLOAT3 scale, DirectX::XMFLOAT3 rotation);
+	virtual ~AlphaStaticMesh() {};
 };

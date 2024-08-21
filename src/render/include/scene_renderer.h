@@ -27,6 +27,8 @@ private:
 	Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> m_command_list;
 	Microsoft::WRL::ComPtr<ID3D12CommandAllocator> m_command_allocator[D3dResources::SWAPCHAIN_BUFFERCOUNT];
 	D3dDescriptorHeapHelper m_rtv_heap;
+	Microsoft::WRL::ComPtr<ID3D12Resource> m_depthstencil_buffer[D3dResources::SWAPCHAIN_BUFFERCOUNT];
+	D3dDescriptorHeapHelper m_dsv_heap;
 	int m_cur_cpu_frame;
 
 	void InitD3dResource();
@@ -37,7 +39,7 @@ private:
 
 	virtual void RenderViewInternel(Scene& scene, const ViewInfo& view,int game_frame);
 	virtual void RenderObjInternel(const std::shared_ptr<RenderProxy>& proxy, const ViewInfo& view, int game_frame);
-	void InitSwapChainBuffer();
+	void InitBuffer();
 	virtual void FrameInitCPU(int game_frame);
 	virtual void FrameFinishCPU(int game_frame);
 	virtual void FrameInitCommandQueue(int game_frame);
