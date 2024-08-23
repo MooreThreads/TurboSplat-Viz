@@ -38,16 +38,33 @@ void TriangleRenderProxy::UploadStatic()
     return;
 }
 
+void TriangleRenderProxy::IASet(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list) const
+{
+    command_list->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    command_list->IASetVertexBuffers(0, 1, &device_static_resource->m_vertex_buffer_view);
+}
+void TriangleRenderProxy::RSSet(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list, const ViewInfo& view) const
+{
+    command_list->RSSetViewports(1, &view.m_viewport);
+    command_list->RSSetScissorRects(1, &view.m_scissor_rect);
+}
+void TriangleRenderProxy::OMSet(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list, const ViewInfo& view) const
+{
+    command_list->OMSetRenderTargets(1, &view.render_target_view, FALSE, &view.depth_stencil_view);
+}
+void TriangleRenderProxy::Draw(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list) const
+{
+    command_list->DrawInstanced(vertex.size(), 1, 0, 0);
+}
+
 void TriangleRenderProxy::PopulateCommandList(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list, const ViewInfo& view, int buffer_index)
 {
     assert(device_static_resource != nullptr);
     assert(b_render_resources_inited);
     assert(shading_model);
-
-    shading_model->PopulateCommandList(command_list, buffer_index);
-    shading_model->SetRootSignatures(command_list, buffer_index, &view, this);
-    command_list->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-    command_list->IASetVertexBuffers(0, 1, &device_static_resource->m_vertex_buffer_view);
-    command_list->DrawInstanced(vertex.size(), 1, 0, 0);
+    IASet(command_list);
+    RSSet(command_list, view);
+    OMSet(command_list, view);
+    shading_model->PopulateCommandList(command_list, buffer_index, &view, this);
     return;
 }

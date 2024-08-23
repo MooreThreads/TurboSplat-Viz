@@ -9,5 +9,3 @@ struct ps_out
     float4 out_color : SV_TARGET;
     float out_depth : SV_Depth;
 };
-
-RWStructuredBuffer<int> start_offset_buffer : register(u1);

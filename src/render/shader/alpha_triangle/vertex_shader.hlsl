@@ -3,6 +3,7 @@ cbuffer view_cbuffer : register(b0)
 {
 	float4x4 view_transform;
 	float4x4 project_transform;
+    int2 viewport_size;
 }
 
 cbuffer batch_cbuffer : register(b1)

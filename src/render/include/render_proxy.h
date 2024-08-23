@@ -13,7 +13,10 @@ public:
 	DirectX::XMMATRIX world_transform;
 	std::shared_ptr<unsigned char> custom_data;
 	bool b_render_resources_inited;
-
+	virtual void IASet(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list) const = 0;
+	virtual void RSSet(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list, const ViewInfo& view) const = 0;
+	virtual void OMSet(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list, const ViewInfo& view) const = 0;
+	virtual void Draw(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list) const = 0;
 	virtual void PopulateCommandList(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list,const ViewInfo& view,int buffer_index)=0;
 	virtual void InitRenderResources()=0;
 	virtual void UploadStatic()=0;
@@ -37,6 +40,10 @@ public:
 public:
 	std::vector<Vertex> vertex;
 	std::unique_ptr<DeviceStaticResource> device_static_resource;
+	virtual void IASet(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list) const;
+	virtual void RSSet(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list, const ViewInfo& view) const;
+	virtual void OMSet(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list, const ViewInfo& view) const;
+	virtual void Draw(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list) const;
 	virtual void PopulateCommandList(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list,const ViewInfo& view, int buffer_index);
 	virtual void InitRenderResources();
 	virtual void UploadStatic();
