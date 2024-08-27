@@ -46,15 +46,10 @@ void main(
         float2 mean = float2(homo_pos.x / homo_pos.w, homo_pos.y / homo_pos.w);
         
         VertexOut vertex[4];
-        /*vertex[0].PositionHS = homo_pos + float4(axis0 * homo_pos.w, 0, 0) + float4(axis1 * homo_pos.w, 0, 0);
+        vertex[0].PositionHS = homo_pos + float4(axis0 * homo_pos.w, 0, 0) + float4(axis1 * homo_pos.w, 0, 0);
         vertex[1].PositionHS = homo_pos - float4(axis0 * homo_pos.w, 0, 0) + float4(axis1 * homo_pos.w, 0, 0);
         vertex[2].PositionHS = homo_pos - float4(axis0 * homo_pos.w, 0, 0) - float4(axis1 * homo_pos.w, 0, 0);
-        vertex[3].PositionHS = homo_pos + float4(axis0 * homo_pos.w, 0, 0) - float4(axis1 * homo_pos.w, 0, 0);*/
-        int gtid_int = gtid;
-        vertex[0].PositionHS = float4(gtid_int, gtid_int, 0.9f, 1);
-        vertex[1].PositionHS = float4(gtid_int, gtid_int, 0.9f, 1);
-        vertex[2].PositionHS = float4(gtid_int, gtid_int, 0.9f, 1);
-        vertex[3].PositionHS = float4(gtid_int, gtid_int, 0.9f, 1);
+        vertex[3].PositionHS = homo_pos + float4(axis0 * homo_pos.w, 0, 0) - float4(axis1 * homo_pos.w, 0, 0);
         vertex[0].color = gaussian_point.color;
         vertex[1].color = gaussian_point.color;
         vertex[2].color = gaussian_point.color;

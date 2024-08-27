@@ -197,8 +197,8 @@ void GaussianSplattingShadingModel::InitPSO()
 		pso_desc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);    // CW front; cull back
 		pso_desc.BlendState = blend_desc;         // transparent
 		pso_desc.DepthStencilState = depth_stencil_desc;
+		pso_desc.SampleMask = UINT_MAX;
 		pso_desc.SampleDesc = DefaultSampleDesc();
-		pso_desc.SampleDesc.Count = 1;
 
 		auto psoStream = CD3DX12_PIPELINE_MESH_STATE_STREAM(pso_desc);
 		D3D12_PIPELINE_STATE_STREAM_DESC streamDesc;
@@ -333,6 +333,8 @@ void GaussianSplattingShadingModel::PopulateCommandList(Microsoft::WRL::ComPtr<I
 
 	//////////////////////////////////craete ppll////////////////////////////////////
 	command_list6->SetPipelineState(m_create_ppll_pso.Get());
+	command_list->RSSetViewports(1, &p_view->m_viewport);
+	command_list->RSSetScissorRects(1, &p_view->m_scissor_rect);
 	command_list6->SetGraphicsRootSignature(m_root_signature_create_ppll.Get());
 	ViewBuffer view_buffer;
 	view_buffer.view_transform = p_view->view_matrix;
