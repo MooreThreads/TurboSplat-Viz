@@ -110,7 +110,7 @@ D3dResources* D3dResources::GetInst()
     return &inst;
 }
 
-Microsoft::WRL::ComPtr<ID3D12Device> D3dResources::GetDevice()
+Microsoft::WRL::ComPtr<ID3D12Device2> D3dResources::GetDevice()
 {
     auto ret=GetInst()->m_device;
     assert(ret != nullptr);

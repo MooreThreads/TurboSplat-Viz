@@ -92,7 +92,6 @@ void SceneRenderer::Render(int game_frame)
         {
             view.render_target_view= m_rtv_heap[game_frame % D3dResources::SWAPCHAIN_BUFFERCOUNT];
             view.depth_stencil_view = m_dsv_heap[game_frame % D3dResources::SWAPCHAIN_BUFFERCOUNT];
-            view.render_target_uav=m_rt_uav_heap[game_frame % D3dResources::SWAPCHAIN_BUFFERCOUNT];
         }
         RenderViewInternel(m_scene_buffer[game_frame % D3dResources::SWAPCHAIN_BUFFERCOUNT], view,game_frame);
     }
@@ -166,12 +165,6 @@ void SceneRenderer::InitBuffer()
         dsvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
         dsvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
         m_dsv_heap.Init(dsvHeapDesc);
-
-        D3D12_DESCRIPTOR_HEAP_DESC rt_uav_heap_desc = {}; // Note: DepthStencil View requires storage in a heap even if we are going to use only 1 view
-        rt_uav_heap_desc.NumDescriptors = D3dResources::SWAPCHAIN_BUFFERCOUNT;
-        rt_uav_heap_desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-        rt_uav_heap_desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-        m_rt_uav_heap.Init(rt_uav_heap_desc);
     }
 
     //create depth stencil buffer
@@ -192,14 +185,6 @@ void SceneRenderer::InitBuffer()
         ThrowIfFailed(m_swap_chain->GetBuffer(i, IID_PPV_ARGS(&m_swap_chain_buffer[i])));
         D3dResources::GetDevice()->CreateRenderTargetView(m_swap_chain_buffer[i].Get(), nullptr, m_rtv_heap[i]);
         D3dResources::GetDevice()->CreateDepthStencilView(m_depthstencil_buffer[i].Get(), nullptr, m_dsv_heap[i]);
-
-        //chreate uav for swap chain
-        D3D12_UNORDERED_ACCESS_VIEW_DESC render_target_uav_desc;
-        render_target_uav_desc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
-        render_target_uav_desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-        render_target_uav_desc.Texture2D.MipSlice = 0;
-        render_target_uav_desc.Texture2D.PlaneSlice = 0;
-        D3dResources::GetDevice()->CreateUnorderedAccessView(m_swap_chain_buffer[i].Get(), nullptr, &render_target_uav_desc, m_rt_uav_heap[i]);
     }
 
     m_back_buffer_offset = m_swap_chain->GetCurrentBackBufferIndex();
@@ -276,7 +261,6 @@ void SceneRenderer::Update(const Scene& game_scene, ViewportInfo viewport_info, 
         SetDefaultView(view, m_viewport_info.width, m_viewport_info.height);
         view.render_target_view = m_rtv_heap[game_frame % D3dResources::SWAPCHAIN_BUFFERCOUNT];
         view.depth_stencil_view = m_dsv_heap[game_frame % D3dResources::SWAPCHAIN_BUFFERCOUNT];
-        view.render_target_uav = m_rt_uav_heap[game_frame % D3dResources::SWAPCHAIN_BUFFERCOUNT];
         m_viewport_info.views.push_back(view);
     }
     

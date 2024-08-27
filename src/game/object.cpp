@@ -143,3 +143,51 @@ AlphaStaticMesh::AlphaStaticMesh(std::shared_ptr<World> world, DirectX::XMFLOAT3
 {
 	m_shading_model_name = typeid(AlphaMeshShadingModel).name();
 }
+
+void GaussianPoints::GenDefaultData()
+{
+	m_vertex_position.clear();
+	m_vertex_color.clear();
+	m_cov3d.clear();
+	for (int i = 0; i < 2; i++)
+	{
+		for (int j = 0; j < 64; j++)
+		{
+			m_vertex_position.emplace_back(DirectX::XMFLOAT3{ -1.0f+0.5f*i,-1.0f+0.01f*j,0.0f });
+			m_vertex_color.emplace_back(DirectX::XMFLOAT4{ 1.0f, 0.0f, 0.0f, 0.5f });
+			m_cov3d.emplace_back(DirectX::XMFLOAT3X3(0.1f, 0, 0, 0, 0.1f, 0, 0, 0, 0.1f));
+		}
+	}
+}
+
+GaussianPoints::GaussianPoints(std::shared_ptr<World> world) :StaticMesh(world)
+{
+	m_shading_model_name = typeid(GaussianSplattingShadingModel).name();
+	GenDefaultData();
+}
+GaussianPoints::GaussianPoints(std::shared_ptr<World> world, DirectX::XMFLOAT3 position, DirectX::XMFLOAT3 scale, DirectX::XMFLOAT3 rotation):
+	StaticMesh(world, position, scale, rotation)
+{
+	m_shading_model_name = typeid(GaussianSplattingShadingModel).name();
+	GenDefaultData();
+}
+
+std::shared_ptr<RenderProxy> GaussianPoints::CreateRenderProxy()
+{
+	std::shared_ptr<GaussianRenderProxy> proxy = std::make_shared<GaussianRenderProxy>();
+	proxy->shading_model = RendererModule::GetInst()->GetShadingModelObj(m_shading_model_name);
+	proxy->world_transform = GetWorldTransform();
+	proxy->b_render_resources_inited = false;
+	proxy->device_static_resource.reset();
+	//TODO:build BVH
+	for (int i = 0; i < m_vertex_position.size(); i++)
+	{
+		proxy->points_buffer.emplace_back(GaussianRenderProxy::GaussianPoint{ m_vertex_position[i], m_vertex_color[i],m_cov3d[i] });
+		if (i % 64 == 0)
+		{
+			proxy->clusters_buffer.emplace_back(GaussianRenderProxy::GaussianCluster{ 64, i });
+		}
+	}
+
+	return proxy;
+}

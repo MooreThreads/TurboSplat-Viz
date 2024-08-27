@@ -14,6 +14,7 @@ private:
 	std::thread m_thread;
 	std::weak_ptr<RenderThreadsPool> m_threadpool;
 	Microsoft::WRL::ComPtr<ID3D12CommandAllocator> m_command_allocator[D3dResources::SWAPCHAIN_BUFFERCOUNT];
+	//ID3D12DescriptorHeap* m_CurrentDescriptorHeaps[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES];
 	int m_cur_allocator_index;
 	Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> m_command_list;
 	const Microsoft::WRL::ComPtr<ID3D12CommandQueue> m_command_queue_ref;

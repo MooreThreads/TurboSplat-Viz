@@ -22,6 +22,15 @@ DirectX::XMMATRIX Camera::GetViewMatrix()
 	inverse_camera_rot.r[3].m128_f32[2] = -position.z;
 	return inverse_camera_rot;
 }
+DirectX::XMFLOAT2 Camera::GetFocal(int viewport_width, int viewport_height)
+{
+	float half_fov_x = fov / 2 / 180 * DirectX::XM_PI;
+	float tan_half_fov_x = std::tanf(half_fov_x);
+	float tan_half_fov_y = tan_half_fov_x / viewport_width * viewport_height;
+	float focal_x = viewport_width / (tan_half_fov_x * 2);
+	float focal_y = viewport_height / (tan_half_fov_y * 2);
+	return { focal_x,focal_y };
+}
 DirectX::XMMATRIX Camera::GetProjectMatrix(int viewport_width, int viewport_height,bool reverse_z)
 {
 	float half_fov_x = fov / 2 / 180 * DirectX::XM_PI;

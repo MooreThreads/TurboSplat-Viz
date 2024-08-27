@@ -70,7 +70,7 @@ void RendererModule::InitShaders()
 	RegisterShader<ScreenTriangleShadingModel>(m_shading_model);
 	RegisterShader<BasicMeshShadingModel>(m_shading_model);
 	RegisterShader<AlphaMeshShadingModel>(m_shading_model);
-	
+	RegisterShader<GaussianSplattingShadingModel>(m_shading_model);
 }
 
 std::shared_ptr< ShadingModel> RendererModule::GetShadingModelObj(std::string model_name)

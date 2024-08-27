@@ -7,8 +7,10 @@ add_library(${PROJECT_NAME} SHARED ${SOURCE_FILES})
 target_compile_definitions(${PROJECT_NAME} PUBLIC "DLLEXPORT")
 target_include_directories(${PROJECT_NAME} PUBLIC "./include")
 target_include_directories(${PROJECT_NAME} PUBLIC "./DirectX-Headers/include/directx")
+target_include_directories(${PROJECT_NAME} PUBLIC "./dxc/inc")
 target_include_directories(${PROJECT_NAME} PUBLIC "../util/DirectXMath/inc")
-target_link_libraries(${PROJECT_NAME} PRIVATE "d3d12.lib" "dxgi.lib" "d3dcompiler.lib" "dxguid.lib")
+target_link_directories(${PROJECT_NAME} PUBLIC "./dxc/lib/x64")
+target_link_libraries(${PROJECT_NAME} PRIVATE "d3d12.lib" "dxgi.lib" "d3dcompiler.lib" "dxguid.lib" "dxcompiler.lib")
 
 add_custom_target(RenderShader)
 add_dependencies(${PROJECT_NAME} RenderShader)
@@ -29,4 +31,14 @@ add_custom_command(
          "${CMAKE_CURRENT_SOURCE_DIR}/D3d12-Agility/bin"
          "${CMAKE_BINARY_DIR}/bin/D3D12"
          COMMENT "Copying agility sdk" VERBATIM
+         )
+
+add_custom_target(DxCompiler)
+add_dependencies(${PROJECT_NAME} DxCompiler)
+add_custom_command(
+         TARGET DxCompiler POST_BUILD
+         COMMAND ${CMAKE_COMMAND} -E copy_directory              
+         "${CMAKE_CURRENT_SOURCE_DIR}/dxc/bin/x64"
+         "${CMAKE_BINARY_DIR}/bin"
+         COMMENT "Copying DxCompiler" VERBATIM
          )

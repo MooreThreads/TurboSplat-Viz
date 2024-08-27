@@ -113,6 +113,7 @@ void World::DoRenderUpdates(ViewportInfo& viewport_info)
 		view.m_scissor_rect = CD3DX12_RECT(0, 0, static_cast<LONG>(viewport_info.width), static_cast<LONG>(viewport_info.height));
 		view.view_matrix = camera->GetViewMatrix();
 		view.project_matrix = camera->GetProjectMatrix(viewport_info.width, viewport_info.height);
+		view.focal = camera->GetFocal(viewport_info.width, viewport_info.height);
 		view.render_target_view = CD3DX12_CPU_DESCRIPTOR_HANDLE();
 
 		viewport_info.views.push_back(view);
@@ -137,10 +138,11 @@ TestWorld::TestWorld():World()
 void TestWorld::Init()
 {
 	//create objs
-	auto obj1 =std::make_shared<AlphaStaticMesh>(shared_from_this(), DirectX::XMFLOAT3{0.0f,0.0f,1.0f}, DirectX::XMFLOAT3{1.0f,1.0f,1.0f}, DirectX::XMFLOAT3{0.0f,0.0f,0.0f});
-	//auto obj2 = std::make_shared<StaticMesh>(shared_from_this(), DirectX::XMFLOAT3{ 0.2f,0.0f,0.8f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f });
-	obj1->Init();
-	//obj2->Init();
+	//auto obj1 =std::make_shared<AlphaStaticMesh>(shared_from_this(), DirectX::XMFLOAT3{0.0f,0.0f,1.0f}, DirectX::XMFLOAT3{1.0f,1.0f,1.0f}, DirectX::XMFLOAT3{0.0f,0.0f,0.0f});
+	//obj1->Init();
+	auto obj2 = std::make_shared<GaussianPoints>(shared_from_this(), DirectX::XMFLOAT3{ 0.0f,0.0f,1.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f });
+	obj2->Init();
+
 	auto camera = std::make_shared<Camera>(shared_from_this(), 90,0.1,100, DirectX::XMFLOAT3{ 0,0,0 }, DirectX::XMFLOAT3{ 0,0,0 });
 	camera->Init();
 }

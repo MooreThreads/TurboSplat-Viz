@@ -49,3 +49,41 @@ public:
 	virtual void UploadStatic();
 	virtual void UploadDynamic(int game_frame);
 };
+
+
+class RENDER_MODULE_API GaussianRenderProxy :public RenderProxy
+{
+public:
+	struct GaussianPoint
+	{
+		DirectX::XMFLOAT3 position;
+		DirectX::XMFLOAT4 color;
+		DirectX::XMFLOAT3X3 cov3d;
+	};
+	struct GaussianCluster
+	{
+		int points_num;
+		int point_offset;
+	};
+
+	struct DeviceStaticResource
+	{
+		Microsoft::WRL::ComPtr<ID3D12Resource> m_points_buffer;
+		Microsoft::WRL::ComPtr<ID3D12Resource> m_clusters_buffer;
+		const int points_srv_index = 0;
+		const int clusters_srv_index = 1;
+		D3dDescriptorHeapHelper descriptor_heap;
+	};
+public:
+	std::vector<GaussianPoint> points_buffer;
+	std::vector<GaussianCluster> clusters_buffer;
+	std::unique_ptr<DeviceStaticResource> device_static_resource;
+	virtual void IASet(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list) const {};
+	virtual void RSSet(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list, const ViewInfo& view) const {};
+	virtual void OMSet(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list, const ViewInfo& view) const {};
+	virtual void Draw(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list) const {};
+	virtual void PopulateCommandList(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list, const ViewInfo& view, int buffer_index);
+	virtual void InitRenderResources();
+	virtual void UploadStatic();
+	virtual void UploadDynamic(int game_frame) {};
+};

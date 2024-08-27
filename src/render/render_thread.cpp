@@ -12,6 +12,18 @@ RenderThread::RenderThread(Microsoft::WRL::ComPtr<ID3D12CommandQueue> command_qu
 		ThrowIfFailed(device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_command_allocator[i])));
 	ThrowIfFailed(device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_command_allocator[0].Get(), nullptr, IID_PPV_ARGS(&m_command_list)));
 	ThrowIfFailed(m_command_list->Close());
+
+	/*
+	UINT NonNullHeaps = 0;
+	ID3D12DescriptorHeap* HeapsToBind[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES];
+	for (UINT i = 0; i < D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES; ++i)
+	{
+		ID3D12DescriptorHeap* HeapIter = m_CurrentDescriptorHeaps[i];
+		if (HeapIter != nullptr)
+			HeapsToBind[NonNullHeaps++] = HeapIter;
+	}
+	if (NonNullHeaps > 0)
+		m_command_list->SetDescriptorHeaps(NonNullHeaps, HeapsToBind);*/
 }
 
 
@@ -24,6 +36,7 @@ RenderThread::RenderThread(RenderThread&& other) noexcept
 		m_command_allocator[i] = other.m_command_allocator[i];
 	}
 	m_command_list = other.m_command_list;
+
 }
 
 RenderThread::~RenderThread()

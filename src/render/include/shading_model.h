@@ -25,11 +25,10 @@ protected:
 
 	virtual void InitShader();
 	virtual void InitRootSignature();
-	void CheckShaderCompile(HRESULT result, Microsoft::WRL::ComPtr<ID3DBlob> error_blob);
 	virtual D3D12_DEPTH_STENCIL_DESC GetDepthStencilDesc();
 	virtual D3D12_BLEND_DESC GetBlendDesc();
 	virtual void InitPSO();
-	virtual void SetRootSignatures(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list, int buffer_index,const ViewInfo* p_view,const RenderProxy* p_render_proxy);
+	virtual void SetRootSignatures(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list, int buffer_index, const ViewInfo* p_view, const RenderProxy* p_render_proxy);
 public:
 	ScreenTriangleShadingModel();
 	virtual void Init();
@@ -56,7 +55,7 @@ protected:
 
 	virtual void InitShader();
 	virtual void InitRootSignature();
-	virtual void SetRootSignatures(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list, int buffer_index,const ViewInfo* p_view,const RenderProxy* p_render_proxy);
+	virtual void SetRootSignatures(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list, int buffer_index, const ViewInfo* p_view, const RenderProxy* p_render_proxy);
 public:
 	BasicMeshShadingModel();
 	
@@ -86,4 +85,58 @@ public:
 	AlphaMeshShadingModel();
 	
 	virtual void PopulateCommandList(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list, int buffer_index, const ViewInfo* p_view, const RenderProxy* p_render_proxy);
+};
+
+class GaussianSplattingShadingModel :public ShadingModel
+{
+public:
+	struct PPLL_D3DFrameResource
+	{
+		Microsoft::WRL::ComPtr <ID3D12Resource> start_offset_buffer;
+		Microsoft::WRL::ComPtr <ID3D12Resource> node_buffer;
+		Microsoft::WRL::ComPtr <ID3D12Resource> node_counter;
+		Microsoft::WRL::ComPtr <ID3D12Resource> target_buffer;
+	};
+	struct ViewBuffer
+	{
+		DirectX::XMMATRIX view_transform;
+		DirectX::XMMATRIX project_transform;
+		DirectX::XMINT2 viewport_size;
+		DirectX::XMFLOAT2 focal_xy;
+	};
+	struct BatchBuffer
+	{
+		DirectX::XMMATRIX world_transform;
+	};
+	const int ViewCBufferIndex = 0;
+	const int BatchCBufferIndex = 1;
+	struct PerPixelLinkedList_Node
+	{
+		int primitive_id;
+		int next;
+	};
+protected:
+	Microsoft::WRL::ComPtr<ID3DBlob> m_clear_ppll_cs;
+	Microsoft::WRL::ComPtr<ID3DBlob> m_create_ppll_ms;
+	Microsoft::WRL::ComPtr<ID3DBlob> m_create_ppll_ps;
+	Microsoft::WRL::ComPtr<ID3DBlob> m_render_ppll_cs;
+	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_clear_ppll_pso;
+	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_create_ppll_pso;
+	Microsoft::WRL::ComPtr<ID3D12RootSignature> m_root_signature_create_ppll;
+	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_render_ppll_pso;
+	Microsoft::WRL::ComPtr<ID3D12RootSignature> m_root_signature_render_ppll;
+
+	PPLL_D3DFrameResource m_frame_resources;
+	D3dDescriptorHeapHelper descriptor_heap;
+
+	virtual void SetRootSignatures(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list, int buffer_index, const ViewInfo* p_view, const RenderProxy* p_render_proxy) {};
+	void InitResources();
+	void InitShaders();
+	void InitPSO();
+	void InitRootSignature();
+public:
+	GaussianSplattingShadingModel();
+	const DirectX::XMINT2 MAX_SCREEN_SIZE = {1920, 1080};
+	virtual void Init();
+	virtual void PopulateCommandList(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list, int buffer_index, const ViewInfo* p_view, const RenderProxy* p_render_proxy) ;
 };

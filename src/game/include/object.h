@@ -49,7 +49,7 @@ public:
 class StaticMesh :public SceneObject
 {
 protected:
-	virtual void GenDefaultData();
+	void GenDefaultData();
 public:
 	std::vector<DirectX::XMFLOAT3> m_vertex_position;
 	std::vector<DirectX::XMFLOAT4> m_vertex_color;
@@ -65,4 +65,16 @@ public:
 	AlphaStaticMesh(std::shared_ptr<World> world);
 	AlphaStaticMesh(std::shared_ptr<World> world, DirectX::XMFLOAT3 position, DirectX::XMFLOAT3 scale, DirectX::XMFLOAT3 rotation);
 	virtual ~AlphaStaticMesh() {};
+};
+
+class GaussianPoints :public StaticMesh
+{
+protected:
+	void GenDefaultData();
+public:
+	std::vector<DirectX::XMFLOAT3X3> m_cov3d;
+	GaussianPoints(std::shared_ptr<World> world);
+	GaussianPoints(std::shared_ptr<World> world, DirectX::XMFLOAT3 position, DirectX::XMFLOAT3 scale, DirectX::XMFLOAT3 rotation);
+	virtual std::shared_ptr<RenderProxy> CreateRenderProxy();
+	virtual ~GaussianPoints() {};
 };

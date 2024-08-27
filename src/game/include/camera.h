@@ -15,4 +15,5 @@ public:
 	DirectX::XMMATRIX GetViewMatrix();
 	DirectX::XMMATRIX GetProjectMatrix(int viewport_width,int viewport_height,bool reverse_z=false);
 	float GetFov() const { return fov; }
+	DirectX::XMFLOAT2 GetFocal(int viewport_width, int viewport_height);
 };

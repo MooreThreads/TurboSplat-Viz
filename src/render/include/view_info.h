@@ -8,6 +8,7 @@ struct ViewInfo
 {
 	DirectX::XMMATRIX view_matrix;
 	DirectX::XMMATRIX project_matrix;
+	DirectX::XMFLOAT2 focal;
 	CD3DX12_CPU_DESCRIPTOR_HANDLE render_target_view;
 	CD3DX12_CPU_DESCRIPTOR_HANDLE render_target_uav;
 	CD3DX12_CPU_DESCRIPTOR_HANDLE depth_stencil_view;

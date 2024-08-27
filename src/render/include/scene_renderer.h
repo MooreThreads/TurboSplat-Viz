@@ -27,7 +27,6 @@ private:
 	Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> m_command_list;
 	Microsoft::WRL::ComPtr<ID3D12CommandAllocator> m_command_allocator[D3dResources::SWAPCHAIN_BUFFERCOUNT];
 	D3dDescriptorHeapHelper m_rtv_heap;
-	D3dDescriptorHeapHelper m_rt_uav_heap;
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_depthstencil_buffer[D3dResources::SWAPCHAIN_BUFFERCOUNT];
 	D3dDescriptorHeapHelper m_dsv_heap;
 	//D3dDescriptorHeapHelper m_dsv_uav_heap;

@@ -19,7 +19,7 @@ void ScreenTriangleShadingModel::Init()
 	InitRootSignature();
 	InitPSO();
 }
-void ScreenTriangleShadingModel::CheckShaderCompile(HRESULT result, Microsoft::WRL::ComPtr<ID3DBlob> error_blob)
+static void CheckShaderCompile(HRESULT result, Microsoft::WRL::ComPtr<ID3DBlob> error_blob)
 {
 	if (FAILED(result))
 	{
@@ -368,11 +368,11 @@ void AlphaMeshShadingModel::CreatePerpixelLinkedListCall(Microsoft::WRL::ComPtr<
 
 void AlphaMeshShadingModel::PopulateCommandList(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list, int buffer_index, const ViewInfo* p_view, const RenderProxy* p_render_proxy)
 {
-	command_list->OMSetRenderTargets(0, nullptr, FALSE, nullptr);
+	//command_list->OMSetRenderTargets(0, nullptr, FALSE, nullptr);
 	CreatePerpixelLinkedListCall(command_list,buffer_index,p_view,p_render_proxy);
 	p_render_proxy->Draw(command_list);
 
 	//render perpixel linked list
-	command_list->OMSetRenderTargets(1, &p_view->render_target_view, FALSE, &p_view->depth_stencil_view);
+	//command_list->OMSetRenderTargets(1, &p_view->render_target_view, FALSE, &p_view->depth_stencil_view);
 	return;
 }
