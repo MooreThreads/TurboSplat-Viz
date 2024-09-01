@@ -92,10 +92,13 @@ class GaussianSplattingShadingModel :public ShadingModel
 public:
 	struct PPLL_D3DFrameResource
 	{
-		Microsoft::WRL::ComPtr <ID3D12Resource> start_offset_buffer;
-		Microsoft::WRL::ComPtr <ID3D12Resource> node_buffer;
-		Microsoft::WRL::ComPtr <ID3D12Resource> node_counter;
-		Microsoft::WRL::ComPtr <ID3D12Resource> target_buffer;
+		Microsoft::WRL::ComPtr<ID3D12Resource> start_offset_buffer;
+		Microsoft::WRL::ComPtr<ID3D12Resource> node_buffer;
+		Microsoft::WRL::ComPtr<ID3D12Resource> node_counter;
+		Microsoft::WRL::ComPtr<ID3D12Resource> gaussian_texture_buffer;
+		Microsoft::WRL::ComPtr<ID3D12Resource> textureUploadHeap;
+		bool bUpload;
+		Microsoft::WRL::ComPtr<ID3D12Resource> target_buffer;
 	};
 	struct ViewBuffer
 	{
@@ -112,7 +115,8 @@ public:
 	const int BatchCBufferIndex = 1;
 	struct PerPixelLinkedList_Node
 	{
-		int primitive_id;
+		UINT64 color;
+		float depth;
 		int next;
 	};
 protected:
@@ -134,9 +138,11 @@ protected:
 	void InitShaders();
 	void InitPSO();
 	void InitRootSignature();
+	void UploadTexture(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list);
 public:
 	GaussianSplattingShadingModel();
 	const DirectX::XMINT2 MAX_SCREEN_SIZE = {1920, 1080};
+	const DirectX::XMINT2 GAUSSIAN_TEXTURE_SIZE = { 128, 128 };
 	virtual void Init();
 	virtual void PopulateCommandList(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list, int buffer_index, const ViewInfo* p_view, const RenderProxy* p_render_proxy) ;
 };

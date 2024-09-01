@@ -71,10 +71,13 @@ class GaussianPoints :public StaticMesh
 {
 protected:
 	void GenDefaultData();
+	void GenProfileData();
+	void load(std::string);
 public:
 	std::vector<DirectX::XMFLOAT3X3> m_cov3d;
-	GaussianPoints(std::shared_ptr<World> world);
-	GaussianPoints(std::shared_ptr<World> world, DirectX::XMFLOAT3 position, DirectX::XMFLOAT3 scale, DirectX::XMFLOAT3 rotation);
+	GaussianPoints(std::shared_ptr<World> world,std::string asset="");
+	GaussianPoints(std::shared_ptr<World> world, DirectX::XMFLOAT3 position, DirectX::XMFLOAT3 scale, DirectX::XMFLOAT3 rotation, std::string asset = "");
+	std::string file_path;
 	virtual std::shared_ptr<RenderProxy> CreateRenderProxy();
 	virtual ~GaussianPoints() {};
 };

@@ -14,7 +14,9 @@ cbuffer batch_cbuffer : register(b1)
 
 StructuredBuffer<GaussianPoint> gaussian_points : register(t0);
 StructuredBuffer<GaussianCluster> gaussian_clusters : register(t1);
+Texture2D<float> gaussian_texture : register(t2);
 
+SamplerState g_sampler : register(s0);
 
 RWByteAddressBuffer start_offset_buffer : register(u1);
 RWStructuredBuffer<PPLL_Node> node_buffer : register(u2);//with counter

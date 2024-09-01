@@ -86,11 +86,14 @@ void SceneRenderer::Render(int game_frame)
     //render views t frame
     m_cur_cpu_frame = game_frame;
     FrameInitCPU(game_frame);
+
+    //render
     for (auto& view : m_viewport_info.views)
     {
         if (view.render_target_view.ptr == 0)
         {
             view.render_target_view= m_rtv_heap[game_frame % D3dResources::SWAPCHAIN_BUFFERCOUNT];
+            view.render_target_buffer = m_swap_chain_buffer[game_frame % D3dResources::SWAPCHAIN_BUFFERCOUNT];
             view.depth_stencil_view = m_dsv_heap[game_frame % D3dResources::SWAPCHAIN_BUFFERCOUNT];
         }
         RenderViewInternel(m_scene_buffer[game_frame % D3dResources::SWAPCHAIN_BUFFERCOUNT], view,game_frame);

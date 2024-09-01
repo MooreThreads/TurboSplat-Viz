@@ -78,6 +78,8 @@ public:
 	std::vector<GaussianPoint> points_buffer;
 	std::vector<GaussianCluster> clusters_buffer;
 	std::unique_ptr<DeviceStaticResource> device_static_resource;
+	std::unique_ptr<DeviceStaticResource> device_upload_resource;
+	bool bUploadHeapUpdated;
 	virtual void IASet(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list) const {};
 	virtual void RSSet(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list, const ViewInfo& view) const {};
 	virtual void OMSet(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list, const ViewInfo& view) const {};
@@ -86,4 +88,5 @@ public:
 	virtual void InitRenderResources();
 	virtual void UploadStatic();
 	virtual void UploadDynamic(int game_frame) {};
+	virtual void UpdateDefaultHeap(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list);
 };
