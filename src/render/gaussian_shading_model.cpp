@@ -192,14 +192,15 @@ void GaussianSplattingShadingModel::InitPSO()
 		D3D12_BLEND_DESC blend_desc = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
 		blend_desc.RenderTarget[0].BlendEnable = true;
 		blend_desc.RenderTarget[0].LogicOpEnable = FALSE;
-		blend_desc.RenderTarget[0].SrcBlend = D3D12_BLEND_SRC_COLOR;
-		blend_desc.RenderTarget[0].DestBlend = D3D12_BLEND_DEST_COLOR;
+		blend_desc.RenderTarget[0].SrcBlend = D3D12_BLEND_SRC_ALPHA;
+		blend_desc.RenderTarget[0].DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
 		blend_desc.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
 		blend_desc.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
-		blend_desc.RenderTarget[0].SrcBlendAlpha = D3D12_BLEND_SRC_ALPHA;
-		blend_desc.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_INV_SRC_ALPHA;
+		blend_desc.RenderTarget[0].SrcBlendAlpha = D3D12_BLEND_ONE;
+		blend_desc.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_ZERO;
 		blend_desc.RenderTarget[0].BlendOpAlpha = D3D12_BLEND_OP_ADD;
 		blend_desc.RenderTarget[0].LogicOp = D3D12_LOGIC_OP_NOOP;
+
 		//depth:disable Depth Wirte & enable Depth Test
 		D3D12_DEPTH_STENCIL_DESC depth_stencil_desc;
 		depth_stencil_desc.DepthEnable = true;
@@ -212,8 +213,8 @@ void GaussianSplattingShadingModel::InitPSO()
 		pso_desc.MS = CD3DX12_SHADER_BYTECODE(m_create_ppll_ms.Get());
 		pso_desc.PS = CD3DX12_SHADER_BYTECODE(m_create_ppll_ps.Get());
 		pso_desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-		pso_desc.NumRenderTargets = 0;
-		pso_desc.RTVFormats[0] = DXGI_FORMAT_UNKNOWN;
+		pso_desc.NumRenderTargets = 1;
+		pso_desc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
 		pso_desc.DSVFormat = DXGI_FORMAT_D32_FLOAT;
 		pso_desc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);   
 		pso_desc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE; // do not cull back!!
@@ -480,6 +481,7 @@ void GaussianSplattingShadingModel::PopulateCommandList(Microsoft::WRL::ComPtr<I
 	command_list6->SetPipelineState(m_create_ppll_pso.Get());
 	command_list->RSSetViewports(1, &p_view->m_viewport);
 	command_list->RSSetScissorRects(1, &p_view->m_scissor_rect);
+	command_list->OMSetRenderTargets(1, &p_view->render_target_view, false,&p_view->depth_stencil_view);
 	command_list6->SetGraphicsRootSignature(m_root_signature_create_ppll.Get());
 	ViewBuffer view_buffer;
 	view_buffer.view_transform = p_view->view_matrix;
@@ -499,18 +501,4 @@ void GaussianSplattingShadingModel::PopulateCommandList(Microsoft::WRL::ComPtr<I
 	create_ppll_barrier.UAV.pResource = m_frame_resources.node_buffer.Get();
 	command_list6->ResourceBarrier(1, &create_ppll_barrier);
 
-	//////////////////////////////////render ppll////////////////////////////////////
-	//command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_frame_resources.target_buffer.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE));
-	command_list6->SetPipelineState(m_render_ppll_pso.Get());
-	command_list6->SetComputeRootSignature(m_root_signature_render_ppll.Get());
-	command_list6->SetComputeRoot32BitConstants(0, sizeof(ViewBuffer) / 4, &view_buffer, 0);
-	command_list6->SetComputeRootDescriptorTable(1, descriptor_heap.GetGPU(6));
-	command_list6->Dispatch(std::ceil(MAX_SCREEN_SIZE.x/16.0f) , std::ceil(MAX_SCREEN_SIZE.y / 16.0f), 1);
-
-	//command_list6->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::UAV(m_frame_resources.target_buffer.Get()));
-	command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_frame_resources.target_buffer.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_SOURCE));
-	command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(p_view->render_target_buffer.Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_COPY_DEST));
-	command_list6->CopyResource(p_view->render_target_buffer.Get(), m_frame_resources.target_buffer.Get());
-	command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(p_view->render_target_buffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_RENDER_TARGET));
-	command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_frame_resources.target_buffer.Get(), D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_COMMON));
 }

@@ -218,6 +218,9 @@ void GaussianPoints::load(std::string path)
 	m_cov3d.reserve(point_num);
 	const RichPoint<0>* data = reinterpret_cast<RichPoint<0>*>(buffer.get() + header_size);
 
+	std::vector<std::pair<float,size_t>> depth_vec;
+	depth_vec.reserve(point_num);
+
 	for (int i = 0; i < point_num; i++)
 	{
 		const RichPoint<0>& point = data[i];
@@ -226,7 +229,8 @@ void GaussianPoints::load(std::string path)
 			continue;
 		}
 		//pos
-		m_vertex_position.push_back(DirectX::XMFLOAT3(point.pos[0], point.pos[1], point.pos[2]));
+		m_vertex_position.emplace_back(DirectX::XMFLOAT3(point.pos[0], point.pos[1], point.pos[2]));
+		depth_vec.emplace_back(std::pair(point.pos[2],depth_vec.size()));
 
 		//color
 		{
@@ -240,7 +244,7 @@ void GaussianPoints::load(std::string path)
 			g = max(min(g, 1.0f), 0.0f);
 			b = max(min(b, 1.0f), 0.0f);
 			a = max(min(a, 1.0f), 0.0f);
-			m_vertex_color.push_back(DirectX::XMFLOAT4(r, g, b, a));
+			m_vertex_color.emplace_back(DirectX::XMFLOAT4(r, g, b, a));
 		}
 
 		//cov3d
@@ -268,6 +272,21 @@ void GaussianPoints::load(std::string path)
 			));
 		}
 	}
+
+	std::sort(depth_vec.begin(), depth_vec.end(), [](const std::pair<float, size_t>& a, const std::pair<float, size_t>& b)->bool {
+		return a.first > b.first;
+		});
+	auto position_copy = m_vertex_position;
+	auto color_copy = m_vertex_color;
+	auto cov3d_copy = m_cov3d;
+	for(int i=0;i< depth_vec.size();i++)
+	{
+		int point_index = depth_vec[i].second;
+		m_vertex_position[i] = position_copy[point_index];
+		m_vertex_color[i] = color_copy[point_index];
+		m_cov3d[i] = cov3d_copy[point_index];
+	}
+
 	return;
 }
 
