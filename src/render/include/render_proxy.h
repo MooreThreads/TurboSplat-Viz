@@ -64,6 +64,8 @@ public:
 	{
 		int points_num;
 		int point_offset;
+		DirectX::XMFLOAT3 origin;
+		DirectX::XMFLOAT3 extension;
 	};
 
 	struct DeviceStaticResource

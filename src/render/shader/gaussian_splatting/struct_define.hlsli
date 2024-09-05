@@ -9,6 +9,8 @@ struct GaussianCluster
 {
     uint points_num;
     uint point_offset;
+    float3 origin;
+    float3 extension;
 };
 
 struct VertexOut

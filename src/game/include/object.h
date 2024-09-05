@@ -75,6 +75,10 @@ protected:
 	void load(std::string);
 public:
 	std::vector<DirectX::XMFLOAT3X3> m_cov3d;
+	std::vector<std::vector<int>> m_cluster;
+	std::vector<DirectX::XMFLOAT3> m_cluster_origin;
+	std::vector<DirectX::XMFLOAT3> m_cluster_extension;
+
 	GaussianPoints(std::shared_ptr<World> world,std::string asset="");
 	GaussianPoints(std::shared_ptr<World> world, DirectX::XMFLOAT3 position, DirectX::XMFLOAT3 scale, DirectX::XMFLOAT3 rotation, std::string asset = "");
 	std::string file_path;
