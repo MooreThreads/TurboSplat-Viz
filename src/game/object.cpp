@@ -404,7 +404,7 @@ std::shared_ptr<RenderProxy> GaussianPoints::CreateRenderProxy()
 	
 	for (int i = 0; i < m_cluster.size(); i++)
 	{
-		proxy->clusters_buffer.emplace_back(GaussianRenderProxy::GaussianCluster{ (int)m_cluster[i].size(), (int)proxy->clusters_buffer.size(),
+		proxy->clusters_buffer.emplace_back(GaussianRenderProxy::GaussianCluster{ (int)m_cluster[i].size(), (int)proxy->points_buffer.size(),
 			m_cluster_origin[i],m_cluster_extension[i]});
 
 		for (int j = 0; j < m_cluster[i].size(); j++)
