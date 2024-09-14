@@ -403,7 +403,7 @@ void MeshGaussianPipeline::InitResources()
 	ThrowIfFailed(m_device->GetDevice()->CreateCommittedResource(&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT), D3D12_HEAP_FLAG_NONE, &gaussian_texture_desc,
 		D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS(&gaussian_texture_buffer)));
 
-	const UINT64 uploadBufferSize = GetRequiredIntermediateSize(gaussian_texture_buffer.Get(), 0, 1);
+	const UINT64 uploadBufferSize = GetRequiredIntermediateSize(gaussian_texture_buffer.Get(), 0, GAUSSIAN_TEXTURE_LOD);
 	ThrowIfFailed(m_device->GetDevice()->CreateCommittedResource(&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),D3D12_HEAP_FLAG_NONE,
 		&CD3DX12_RESOURCE_DESC::Buffer(uploadBufferSize),D3D12_RESOURCE_STATE_GENERIC_READ,nullptr,IID_PPV_ARGS(&gaussian_texture_upload_buffer)));
 
@@ -427,8 +427,10 @@ void MeshGaussianPipeline::InitResources()
 		m_heaps[D3D12_DESCRIPTOR_HEAP_TYPE::D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV][0]);
 
 	//init cpu data
-	cpu_gaussian_texture_buffer.resize(GAUSSIAN_TEXTURE_SIZE.x * GAUSSIAN_TEXTURE_SIZE.y * 2);
+	cpu_gaussian_texture_buffer.resize(GAUSSIAN_TEXTURE_LOD);
+	cpu_gaussian_texture_buffer[0].resize(GAUSSIAN_TEXTURE_SIZE.x* GAUSSIAN_TEXTURE_SIZE.y);
 	{
+		auto& cpu_texture = cpu_gaussian_texture_buffer[0];
 		float mean_x = GAUSSIAN_TEXTURE_SIZE.x / 2;
 		float mean_y = GAUSSIAN_TEXTURE_SIZE.y / 2;
 		float axis_x = mean_x - 0.5f;
@@ -441,43 +443,44 @@ void MeshGaussianPipeline::InitResources()
 			{
 				float delta_x = x + 0.5f - mean_x;
 				float delta_y = y + 0.5f - mean_y;
-				cpu_gaussian_texture_buffer[y * GAUSSIAN_TEXTURE_SIZE.x + x] = std::exp(-0.5 * (cov_inv_00 * delta_x * delta_x + cov_inv_11 * delta_y * delta_y));
+				cpu_texture[y * GAUSSIAN_TEXTURE_SIZE.x + x] = std::exp(-0.5 * (cov_inv_00 * delta_x * delta_x + cov_inv_11 * delta_y * delta_y));
 			}
 		}
 	}
-	int cur_lod_offset = GAUSSIAN_TEXTURE_SIZE.x * GAUSSIAN_TEXTURE_SIZE.y;
-	int last_lod_offset = 0;
 	for (int lod = 1; lod < GAUSSIAN_TEXTURE_LOD; lod++)
 	{
 		int cur_lod_size_x = (GAUSSIAN_TEXTURE_SIZE.x >> lod);
 		int cur_lod_size_y = (GAUSSIAN_TEXTURE_SIZE.y >> lod);
-		int last_lod_size_x = (GAUSSIAN_TEXTURE_SIZE.x >> lod);
-		int last_lod_size_y = (GAUSSIAN_TEXTURE_SIZE.y >> lod);
+		cpu_gaussian_texture_buffer[lod].resize(cur_lod_size_x * cur_lod_size_y);
 		for (int x = 0; x < cur_lod_size_x; x++)
 		{
 			for (int y = 0; y < cur_lod_size_y; y++)
 			{
-				float value=cpu_gaussian_texture_buffer[last_lod_offset + (y * 2) * last_lod_size_x + (x * 2)];
-				value = std::fmaxf(value, cpu_gaussian_texture_buffer[last_lod_offset + (y * 2) * last_lod_size_x + (x * 2 + 1)]);
-				value = std::fmaxf(value, cpu_gaussian_texture_buffer[last_lod_offset + (y * 2 + 1) * last_lod_size_x + (x * 2)]);
-				value = std::fmaxf(value, cpu_gaussian_texture_buffer[last_lod_offset + (y * 2 + 1) * last_lod_size_x + (x * 2 + 1)]);
-				cpu_gaussian_texture_buffer[cur_lod_offset + y * cur_lod_size_x + x] = value;
+				float value = cpu_gaussian_texture_buffer[lod - 1][(y * 2) * (cur_lod_size_x * 2) + (x * 2)];
+				value += cpu_gaussian_texture_buffer[lod - 1][(y * 2 + 1) * (cur_lod_size_x * 2) + (x * 2)];
+				value += cpu_gaussian_texture_buffer[lod - 1][(y * 2) * (cur_lod_size_x * 2) + (x * 2 + 1)];
+				value += cpu_gaussian_texture_buffer[lod - 1][(y * 2 + 1) * (cur_lod_size_x * 2) + (x * 2 + 1)];
+				cpu_gaussian_texture_buffer[lod][y * cur_lod_size_x + x] = value / 4.0f;
 			}
 		}
-		last_lod_offset = cur_lod_offset;
-		cur_lod_offset += cur_lod_size_x * cur_lod_size_y;
 	}
-
+	
+	return;
 }
 
 void MeshGaussianPipeline::UpdatePipelineData(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list)
 {
 	assert(pipeline_data_dirty);
-	D3D12_SUBRESOURCE_DATA textureData = {};
-	textureData.pData = cpu_gaussian_texture_buffer.data();
-	textureData.RowPitch = GAUSSIAN_TEXTURE_SIZE.x * sizeof(float);
-	textureData.SlicePitch = textureData.RowPitch * GAUSSIAN_TEXTURE_SIZE.y * 2;
-	UpdateSubresources(command_list.Get(), gaussian_texture_buffer.Get(), gaussian_texture_upload_buffer.Get(), 0, 0, 1, &textureData);
+	std::vector<D3D12_SUBRESOURCE_DATA> texture_lod_data;
+	texture_lod_data.resize(GAUSSIAN_TEXTURE_LOD);
+	for(int i=0;i< GAUSSIAN_TEXTURE_LOD;i++)
+	{
+		texture_lod_data[i].pData = cpu_gaussian_texture_buffer[i].data();
+		texture_lod_data[i].RowPitch = (GAUSSIAN_TEXTURE_SIZE.x>>i) * sizeof(float);
+		texture_lod_data[i].SlicePitch = cpu_gaussian_texture_buffer[i].size()*sizeof(float);
+	}
+
+	UpdateSubresources(command_list.Get(), gaussian_texture_buffer.Get(), gaussian_texture_upload_buffer.Get(), 0, 0, GAUSSIAN_TEXTURE_LOD, texture_lod_data.data());
 	command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(gaussian_texture_buffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE));
 	pipeline_data_dirty = false;
 }

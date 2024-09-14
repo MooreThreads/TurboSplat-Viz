@@ -110,7 +110,7 @@ protected:
 
 	Microsoft::WRL::ComPtr<ID3D12Resource> gaussian_texture_buffer;
 	Microsoft::WRL::ComPtr<ID3D12Resource> gaussian_texture_upload_buffer;
-	std::vector<float> cpu_gaussian_texture_buffer;
+	std::vector<std::vector<float>> cpu_gaussian_texture_buffer;
 	bool pipeline_data_dirty;
 
 	virtual void InitShaders();
