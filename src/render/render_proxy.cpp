@@ -1,15 +1,24 @@
 #include "render_proxy.h"
 #include "d3d_helper.h"
 #include "shading_model.h"
+#include "device.h"
+#include "descriptor_heap.h"
 
-void TriangleRenderProxy::InitRenderResources()
+struct TriangleDeviceStaticResource
+{
+    Microsoft::WRL::ComPtr<ID3D12Resource> m_vertex_buffer;
+    D3D12_VERTEX_BUFFER_VIEW m_vertex_buffer_view;
+};
+
+void TriangleRenderProxy::InitRenderResources(std::shared_ptr<D3DHelper::Device> device)
 {
 	assert(device_static_resource ==nullptr);
     assert(b_render_resources_inited == false);
-    device_static_resource = std::make_unique<DeviceStaticResource>();
+    m_device = device;
+    device_static_resource = std::make_shared<TriangleDeviceStaticResource>();
 
 
-    ThrowIfFailed(D3dResources::GetDevice()->CreateCommittedResource(
+    ThrowIfFailed(device->GetDevice()->CreateCommittedResource(
         &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
         D3D12_HEAP_FLAG_NONE,
         &CD3DX12_RESOURCE_DESC::Buffer(vertex.size() * sizeof(Vertex)),
@@ -24,11 +33,11 @@ void TriangleRenderProxy::InitRenderResources()
     b_render_resources_inited = true;
     return;
 }
-void TriangleRenderProxy::UploadDynamic(int game_frame)
+void TriangleRenderProxy::UploadDynamic(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list,int game_frame)
 {
     return;
 }
-void TriangleRenderProxy::UploadStatic()
+void TriangleRenderProxy::UploadStatic(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list)
 {
     UINT8* pVertexDataBegin;
     CD3DX12_RANGE readRange(0, 0);        // We do not intend to read from this resource on the CPU.
@@ -38,33 +47,13 @@ void TriangleRenderProxy::UploadStatic()
     return;
 }
 
-void TriangleRenderProxy::IASet(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list) const
+void TriangleRenderProxy::CommitParams(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list, D3DHelper::StaticDescriptorStack* param_stack) const
 {
     command_list->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     command_list->IASetVertexBuffers(0, 1, &device_static_resource->m_vertex_buffer_view);
 }
-void TriangleRenderProxy::RSSet(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list, const ViewInfo& view) const
-{
-    command_list->RSSetViewports(1, &view.m_viewport);
-    command_list->RSSetScissorRects(1, &view.m_scissor_rect);
-}
-void TriangleRenderProxy::OMSet(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list, const ViewInfo& view) const
-{
-    command_list->OMSetRenderTargets(1, &view.render_target_view, FALSE, &view.depth_stencil_view);
-}
-void TriangleRenderProxy::Draw(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list) const
-{
-    command_list->DrawInstanced(vertex.size(), 1, 0, 0);
-}
 
-void TriangleRenderProxy::PopulateCommandList(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list, const ViewInfo& view, int buffer_index)
+int TriangleRenderProxy::GetVertexCountPerInstance() const
 {
-    assert(device_static_resource != nullptr);
-    assert(b_render_resources_inited);
-    assert(shading_model);
-    IASet(command_list);
-    RSSet(command_list, view);
-    OMSet(command_list, view);
-    shading_model->PopulateCommandList(command_list, buffer_index, &view, this);
-    return;
+    return vertex.size();
 }

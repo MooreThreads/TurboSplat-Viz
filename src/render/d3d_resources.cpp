@@ -1,3 +1,5 @@
+/*
+
 #include"d3d_resources.h"
 #include"d3d_helper.h"
 #include<assert.h>
@@ -69,12 +71,12 @@ static void GetHardwareAdapter(
 }
 
 
-D3dResources::D3dResources():m_device(nullptr),m_factory(nullptr),m_hardware_adapter(nullptr)
+DeviceManager::DeviceManager():m_device(nullptr),m_hardware_adapter(nullptr)
 {
 
 }
 
-void D3dResources::Init()
+void DeviceManager::Init()
 {
     UINT dxgiFactoryFlags = 0;
 
@@ -92,17 +94,16 @@ void D3dResources::Init()
         }
     }
 #endif
-
-    ThrowIfFailed(CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(&m_factory)));
-
-    ::GetHardwareAdapter(m_factory.Get(), &m_hardware_adapter, false);
+    ComPtr<IDXGIFactory2>  dxgiFactory;
+    ThrowIfFailed(CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(&dxgiFactory)));
+    ::GetHardwareAdapter(dxgiFactory.Get(), &m_hardware_adapter, false);
 
     ThrowIfFailed(D3D12CreateDevice(m_hardware_adapter.Get(), D3D_FEATURE_LEVEL_12_0, IID_PPV_ARGS(&m_device)));
 }
 
-D3dResources* D3dResources::GetInst()
+DeviceManager* DeviceManager::GetInst()
 {
-    static D3dResources inst;
+    static DeviceManager inst;
     if (inst.m_device == nullptr)
     {
         inst.Init();
@@ -110,21 +111,15 @@ D3dResources* D3dResources::GetInst()
     return &inst;
 }
 
-Microsoft::WRL::ComPtr<ID3D12Device2> D3dResources::GetDevice()
+Microsoft::WRL::ComPtr<ID3D12Device2> DeviceManager::GetDevice()
 {
     auto ret=GetInst()->m_device;
     assert(ret != nullptr);
     return ret;
 }
 
-Microsoft::WRL::ComPtr<IDXGIFactory4> D3dResources::GetFactory()
-{
-    auto ret = GetInst()->m_factory;
-    assert(ret != nullptr);
-    return ret;
-}
 
-Microsoft::WRL::ComPtr<IDXGIAdapter1> D3dResources::GetHardwareAdapter()
+Microsoft::WRL::ComPtr<IDXGIAdapter1> DeviceManager::GetHardwareAdapter()
 {
     auto ret = GetInst()->m_hardware_adapter;
     assert(ret != nullptr);
@@ -138,8 +133,8 @@ D3dDescriptorHeapHelper::D3dDescriptorHeapHelper():m_descriptor_size(0)
 }
 void D3dDescriptorHeapHelper::Init(D3D12_DESCRIPTOR_HEAP_DESC desc)
 {
-    ThrowIfFailed(D3dResources::GetDevice()->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_heap)));
-    m_descriptor_size = D3dResources::GetDevice()->GetDescriptorHandleIncrementSize(desc.Type);
+    ThrowIfFailed(DeviceManager::GetDevice()->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_heap)));
+    m_descriptor_size = DeviceManager::GetDevice()->GetDescriptorHandleIncrementSize(desc.Type);
 }
 CD3DX12_CPU_DESCRIPTOR_HANDLE D3dDescriptorHeapHelper::Get(int index)
 {
@@ -157,3 +152,5 @@ CD3DX12_CPU_DESCRIPTOR_HANDLE D3dDescriptorHeapHelper::operator[](int index)
 {
     return Get(index);
 }
+
+*/

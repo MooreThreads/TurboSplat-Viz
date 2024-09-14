@@ -138,9 +138,9 @@ TestWorld::TestWorld():World()
 void TestWorld::Init()
 {
 	//create objs
-	//auto obj1 =std::make_shared<AlphaStaticMesh>(shared_from_this(), DirectX::XMFLOAT3{0.0f,0.0f,1.0f}, DirectX::XMFLOAT3{1.0f,1.0f,1.0f}, DirectX::XMFLOAT3{0.0f,0.0f,0.0f});
-	//obj1->Init();
-	auto obj2 = std::make_shared<GaussianPoints>(shared_from_this(), DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f },"./asset/sh0_4M.ply");
+	/*auto obj1 = std::make_shared<StaticMesh>(shared_from_this(), DirectX::XMFLOAT3{0.0f,0.0f,1.0f}, DirectX::XMFLOAT3{1.0f,1.0f,1.0f}, DirectX::XMFLOAT3{0.0f,0.0f,0.0f});
+	obj1->Init();*/
+	auto obj2 = std::make_shared<GaussianPoints>(shared_from_this(), DirectX::XMFLOAT3{0.0f,0.0f,0.0f}, DirectX::XMFLOAT3{1.0f,1.0f,1.0f}, DirectX::XMFLOAT3{0.0f,0.0f,0.0f}, "./asset/sh0_4M.ply");
 	obj2->Init();
 
 	auto camera = std::make_shared<Camera>(shared_from_this(), 90,0.1,100, DirectX::XMFLOAT3{ 0,0,0 }, DirectX::XMFLOAT3{ 0,0,0 });

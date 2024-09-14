@@ -10,8 +10,10 @@
 #include <D3Dcompiler.h>
 #include <set>
 #include"render_thread.h"
-#include"d3d_resources.h"
 
+namespace D3DHelper {
+	class Device;
+};
 
 class RenderThreadsPool:public std::enable_shared_from_this< RenderThreadsPool>
 {
@@ -25,15 +27,16 @@ private:
 	int m_backqueue_index;
 	bool b_init;
 
+	std::shared_ptr<D3DHelper::Device> m_device;
+
 public:
-	RenderThreadsPool();
+	RenderThreadsPool(std::shared_ptr<D3DHelper::Device> device);
 	~RenderThreadsPool();
 	std::mutex mutex;
 	std::condition_variable renderthread_queue_ready;
 	std::condition_variable renderthread_finished;
 	std::atomic<int> ready_num;
 	std::atomic<int> finish_num;
-	std::shared_ptr<D3dResources> d3d_resource;
 
 	int GetThreadsNum() const { return m_threads.size(); }
 	bool IsRenderThread() const;

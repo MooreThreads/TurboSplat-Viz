@@ -19,7 +19,7 @@ bool RenderThreadsPool::PopRenderTask(RenderTask& task)
 }
 
 
-RenderThreadsPool::RenderThreadsPool():m_task_queue(), m_threads(), m_backqueue_index(0), ready_num(0), finish_num(0),b_init(false), d3d_resource(nullptr)
+RenderThreadsPool::RenderThreadsPool(std::shared_ptr<D3DHelper::Device> device):m_task_queue(), m_threads(), m_backqueue_index(0), ready_num(0), finish_num(0),b_init(false),m_device(device)
 {
 }
 
@@ -72,7 +72,7 @@ void RenderThreadsPool::Init(int threadsnum, Microsoft::WRL::ComPtr<ID3D12Comman
 	assert(m_threads.size() == 0);
 	for (int i = 0; i < threadsnum; i++)
 	{
-		m_threads.emplace_back(command_queue, shared_from_this());
+		m_threads.emplace_back(command_queue, shared_from_this(),m_device);
 	}
 	for (int i = 0; i < threadsnum; i++)
 	{

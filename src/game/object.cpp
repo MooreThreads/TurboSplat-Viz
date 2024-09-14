@@ -3,6 +3,7 @@
 #include"render_proxy.h"
 #include "shading_model.h"
 #include"renderer.h"
+#include<filesystem>
 #include<fstream>
 #include <string>
 #include<algorithm>
@@ -138,15 +139,6 @@ std::shared_ptr<RenderProxy> StaticMesh::CreateRenderProxy()
 	return proxy;
 }
 
-AlphaStaticMesh::AlphaStaticMesh(std::shared_ptr<World> world):StaticMesh(world)
-{
-	m_shading_model_name = typeid(AlphaMeshShadingModel).name();
-}
-
-AlphaStaticMesh::AlphaStaticMesh(std::shared_ptr<World> world, DirectX::XMFLOAT3 position, DirectX::XMFLOAT3 scale, DirectX::XMFLOAT3 rotation) :StaticMesh(world, position, scale, rotation)
-{
-	m_shading_model_name = typeid(AlphaMeshShadingModel).name();
-}
 
 void GaussianPoints::GenDefaultData()
 {
@@ -183,16 +175,195 @@ void GaussianPoints::GenProfileData()
 
 void GaussianPoints::load(std::string path)
 {
-	GSLoader loader;
-	loader.Load(path);
-	m_vertex_position = loader.position;
-	m_vertex_color = loader.color;
-	m_cov3d = loader.cov3d;
-	m_cluster = loader.clusters;
-	m_cluster_origin = loader.cluster_AABB_origin;
-	m_cluster_extension = loader.cluster_AABB_extension;
+	assert(std::filesystem::exists(path));
+	bool cache_miss = true;
+	if (std::filesystem::exists(path + ".cache"))
+	{
+		auto asset_update_time = std::filesystem::last_write_time(path);
+		auto cache_create_time = std::filesystem::last_write_time(path + ".cache");
+		if (cache_create_time > asset_update_time)
+		{
+			std::vector<uint8_t> bin_data;
+			std::fstream stream(path + ".cache", std::ios_base::binary | std::ios_base::in);
+			stream.seekg(0, std::ios::end);
+			int filesize = stream.tellg();
+			stream.seekg(0, std::ios::beg);
+			bin_data.resize(filesize);
+			stream.read((char*)bin_data.data(), filesize);
+			Deserialization(bin_data);
+			cache_miss = false;
+		}
+	}
+	
+	if(cache_miss)
+	{
+		GSLoader loader;
+		loader.Load(path);
+		m_vertex_position = loader.position;
+		m_vertex_color = loader.color;
+		m_cov3d = loader.cov3d;
+		m_cluster = loader.clusters;
+		m_cluster_origin = loader.cluster_AABB_origin;
+		m_cluster_extension = loader.cluster_AABB_extension;
+		std::vector<uint8_t> save_data;
+		Serialization(save_data);
+		std::fstream stream(path + ".cache", std::ios_base::binary | std::ios_base::out);
+		stream.write((const char*)save_data.data(), save_data.size());
+		stream.close();
+	}
 	return;
 }
+
+void GaussianPoints::Serialization(std::vector<uint8_t>& output)
+{
+	output.clear();
+	int points_num = m_vertex_position.size();
+	assert(m_vertex_color.size() == points_num);
+	assert(m_cov3d.size() == points_num);
+
+	output.push_back(reinterpret_cast<uint8_t*>(&points_num)[0]);
+	output.push_back(reinterpret_cast<uint8_t*>(&points_num)[1]);
+	output.push_back(reinterpret_cast<uint8_t*>(&points_num)[2]);
+	output.push_back(reinterpret_cast<uint8_t*>(&points_num)[3]);
+
+	for (int i = 0; i < points_num; i++)
+	{
+		uint8_t* data_ptr = reinterpret_cast<uint8_t*>(m_vertex_position.data() + i);
+		for (int j = 0; j < sizeof(DirectX::XMFLOAT3); j++)
+		{
+			output.push_back(data_ptr[j]);
+		}
+	}
+	for (int i = 0; i < points_num; i++)
+	{
+		uint8_t* data_ptr = reinterpret_cast<uint8_t*>(m_vertex_color.data() + i);
+		for (int j = 0; j < sizeof(DirectX::XMFLOAT4); j++)
+		{
+			output.push_back(data_ptr[j]);
+		}
+	}
+	for (int i = 0; i < points_num; i++)
+	{
+		uint8_t* data_ptr = reinterpret_cast<uint8_t*>(m_cov3d.data() + i);
+		for (int j = 0; j < sizeof(DirectX::XMFLOAT3X3); j++)
+		{
+			output.push_back(data_ptr[j]);
+		}
+	}
+
+	int clusters_num = m_cluster.size();
+	assert(m_cluster_origin.size() == clusters_num);
+	assert(m_cluster_extension.size() == clusters_num);
+	output.push_back(reinterpret_cast<uint8_t*>(&clusters_num)[0]);
+	output.push_back(reinterpret_cast<uint8_t*>(&clusters_num)[1]);
+	output.push_back(reinterpret_cast<uint8_t*>(&clusters_num)[2]);
+	output.push_back(reinterpret_cast<uint8_t*>(&clusters_num)[3]);
+	for (int i = 0; i < clusters_num; i++)
+	{
+		int points_num_in_cluster = m_cluster[i].size();
+		output.push_back(reinterpret_cast<uint8_t*>(&points_num_in_cluster)[0]);
+		output.push_back(reinterpret_cast<uint8_t*>(&points_num_in_cluster)[1]);
+		output.push_back(reinterpret_cast<uint8_t*>(&points_num_in_cluster)[2]);
+		output.push_back(reinterpret_cast<uint8_t*>(&points_num_in_cluster)[3]);
+		for (int j = 0; j < points_num_in_cluster; j++)
+		{
+			int point_id = m_cluster[i][j];
+			output.push_back(reinterpret_cast<uint8_t*>(&point_id)[0]);
+			output.push_back(reinterpret_cast<uint8_t*>(&point_id)[1]);
+			output.push_back(reinterpret_cast<uint8_t*>(&point_id)[2]);
+			output.push_back(reinterpret_cast<uint8_t*>(&point_id)[3]);
+		}
+	}
+	for (int i = 0; i < clusters_num; i++)
+	{
+		uint8_t* data_ptr = reinterpret_cast<uint8_t*>(m_cluster_origin.data() + i);
+		for (int j = 0; j < sizeof(DirectX::XMFLOAT3); j++)
+		{
+			output.push_back(data_ptr[j]);
+		}
+	}
+	for (int i = 0; i < clusters_num; i++)
+	{
+		uint8_t* data_ptr = reinterpret_cast<uint8_t*>(m_cluster_extension.data() + i);
+		for (int j = 0; j < sizeof(DirectX::XMFLOAT3); j++)
+		{
+			output.push_back(data_ptr[j]);
+		}
+	}
+
+}
+
+void GaussianPoints::Deserialization(const std::vector<uint8_t>& data)
+{
+	m_vertex_position.clear();
+	m_vertex_color.clear();
+	m_cov3d.clear();
+	m_cluster.clear();
+	m_cluster_origin.clear();
+	m_cluster_extension.clear();
+
+	const uint8_t* data_ptr = data.data();
+	int points_num = reinterpret_cast<const int*>(data_ptr)[0];
+	data_ptr += 4;
+
+	//position
+	const DirectX::XMFLOAT3* position_data = reinterpret_cast<const DirectX::XMFLOAT3*>(data_ptr);
+	for (int i = 0; i < points_num;i++)
+	{
+		m_vertex_position.push_back(position_data[i]);
+	}
+	data_ptr += sizeof(DirectX::XMFLOAT3) * points_num;
+	//color
+	const DirectX::XMFLOAT4* color_data = reinterpret_cast<const DirectX::XMFLOAT4*>(data_ptr);
+	for (int i = 0; i < points_num; i++)
+	{
+		m_vertex_color.push_back(color_data[i]);
+	}
+	data_ptr += sizeof(DirectX::XMFLOAT4) * points_num;
+	//cov
+	const DirectX::XMFLOAT3X3* cov_data = reinterpret_cast<const DirectX::XMFLOAT3X3*>(data_ptr);
+	for (int i = 0; i < points_num; i++)
+	{
+		m_cov3d.push_back(cov_data[i]);
+	}
+	data_ptr += sizeof(DirectX::XMFLOAT3X3) * points_num;
+
+	int clusters_num = reinterpret_cast<const int*>(data_ptr)[0];
+	data_ptr += 4;
+
+	for (int i = 0; i < clusters_num; i++)
+	{
+		int points_num_in_cluster= reinterpret_cast<const int*>(data_ptr)[0];
+		data_ptr += 4;
+		const int* point_id_data= reinterpret_cast<const int*>(data_ptr);
+		std::vector<int> point_id_list;
+		point_id_list.reserve(points_num_in_cluster);
+		for (int j = 0; j < points_num_in_cluster; j++)
+		{
+			point_id_list.push_back(point_id_data[j]);
+		}
+		data_ptr += sizeof(int) * points_num_in_cluster;
+		m_cluster.push_back(point_id_list);
+	}
+
+	const DirectX::XMFLOAT3* origin_data = reinterpret_cast<const DirectX::XMFLOAT3*>(data_ptr);
+	for (int i = 0; i < clusters_num; i++)
+	{
+		m_cluster_origin.push_back(origin_data[i]);
+	}
+	data_ptr += sizeof(DirectX::XMFLOAT3) * clusters_num;
+
+	const DirectX::XMFLOAT3* extension_data = reinterpret_cast<const DirectX::XMFLOAT3*>(data_ptr);
+	for (int i = 0; i < clusters_num; i++)
+	{
+		m_cluster_extension.push_back(extension_data[i]);
+	}
+	data_ptr += sizeof(DirectX::XMFLOAT3) * clusters_num;
+
+	return;
+
+}
+
 
 GaussianPoints::GaussianPoints(std::shared_ptr<World> world , std::string asset ) :StaticMesh(world)
 {

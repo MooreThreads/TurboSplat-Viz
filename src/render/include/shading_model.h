@@ -1,74 +1,91 @@
 #pragma once
 #include<d3d.h>
-#include"d3d_resources.h"
+#include <wrl.h>
+#include<map>
+#include<memory>
 #include"DirectXMath.h"
+#include "d3d12.h"
 
 class ViewInfo;
 class RenderProxy;
+class ID3D12GraphicsCommandList;
+class DefaultGraphicPipeline;
+class StaticMeshGraphicPipeline;
+class MeshGaussianPipeline;
+
+namespace D3DHelper
+{
+	class StaticDescriptorStack;
+	class Device;
+}
 
 class ShadingModel
 {
 public:
-	virtual void Init()=0;
-	virtual void PopulateCommandList(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list, int buffer_index, const ViewInfo* p_view, const RenderProxy* p_render_proxy)=0;
-protected:
-	virtual void SetRootSignatures(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list, int buffer_index,const ViewInfo* p_view, const RenderProxy* p_render_proxy)=0;
+	virtual void RegisterDevice(std::shared_ptr<D3DHelper::Device> device)=0;
+	virtual void PopulateCommandList(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list,
+		D3DHelper::StaticDescriptorStack(&binded_heaps)[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES],
+		int buffer_index, const ViewInfo* p_view, const RenderProxy* p_render_proxy)=0;
 };
 
 class ScreenTriangleShadingModel:public ShadingModel
 {
-protected:
-	Microsoft::WRL::ComPtr<ID3DBlob> m_vertex_shader;
-	Microsoft::WRL::ComPtr<ID3DBlob> m_pixel_shader;
-	Microsoft::WRL::ComPtr<ID3D12RootSignature> m_root_signature[D3dResources::SWAPCHAIN_BUFFERCOUNT];
-	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_pipeline_state;
-
-	virtual void InitShader();
-	virtual void InitRootSignature();
-	virtual D3D12_DEPTH_STENCIL_DESC GetDepthStencilDesc();
-	virtual D3D12_BLEND_DESC GetBlendDesc();
-	virtual void InitPSO();
-	virtual void SetRootSignatures(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list, int buffer_index, const ViewInfo* p_view, const RenderProxy* p_render_proxy);
+private:
+	struct PilelineList {
+		std::shared_ptr<DefaultGraphicPipeline> draw_triangle_pipeline;
+	};
+	std::map<D3DHelper::Device*, PilelineList> m_device_pipeline_list;
 public:
 	ScreenTriangleShadingModel();
-	virtual void Init();
-	virtual void PopulateCommandList(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list,int buffer_index, const ViewInfo* p_view, const RenderProxy* p_render_proxy);
+	virtual void RegisterDevice(std::shared_ptr<D3DHelper::Device> device);
+	virtual void PopulateCommandList(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list,
+		D3DHelper::StaticDescriptorStack(&binded_heaps)[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES], 
+		int buffer_index, const ViewInfo* p_view, const RenderProxy* p_render_proxy);
 	
 };
 
-class BasicMeshShadingModel:public ScreenTriangleShadingModel
+class BasicMeshShadingModel:public ShadingModel
 {
-public:
-	struct ViewBuffer
-	{
-		DirectX::XMMATRIX view_transform;
-		DirectX::XMMATRIX project_transform;
-		DirectX::XMINT2 viewport_size;
+private:
+	struct PilelineList {
+		std::shared_ptr<StaticMeshGraphicPipeline> draw_triangle_pipeline;
 	};
-	struct BatchBuffer
-	{
-		DirectX::XMMATRIX world_transform;
-	};
-	const int ViewCBufferIndex = 0;
-	const int BatchCBufferIndex = 1;
-protected:
+	std::map<D3DHelper::Device*, PilelineList> m_device_pipeline_list;
 
-	virtual void InitShader();
-	virtual void InitRootSignature();
-	virtual void SetRootSignatures(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list, int buffer_index, const ViewInfo* p_view, const RenderProxy* p_render_proxy);
 public:
 	BasicMeshShadingModel();
-	
+	virtual void RegisterDevice(std::shared_ptr<D3DHelper::Device> device);
+	virtual void PopulateCommandList(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list,
+		D3DHelper::StaticDescriptorStack(&binded_heaps)[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES],
+		int buffer_index, const ViewInfo* p_view, const RenderProxy* p_render_proxy);
 };
 
+class GaussianSplattingShadingModel :public ShadingModel
+{
+private:
+	struct PilelineList {
+		std::shared_ptr<MeshGaussianPipeline> draw_mesh_gs_pipeline;
+	};
+	std::map<D3DHelper::Device*, PilelineList> m_device_pipeline_list;
+
+public:
+	GaussianSplattingShadingModel();
+	virtual void RegisterDevice(std::shared_ptr<D3DHelper::Device> device);
+	virtual void PopulateCommandList(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list,
+		D3DHelper::StaticDescriptorStack(&binded_heaps)[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES],
+		int buffer_index, const ViewInfo* p_view, const RenderProxy* p_render_proxy);
+};
+
+
+/*
 class AlphaMeshShadingModel :public BasicMeshShadingModel
 {
 protected:
 	Microsoft::WRL::ComPtr<ID3DBlob> m_clear_cs;
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_clear_pso;
-	Microsoft::WRL::ComPtr <ID3D12Resource> m_start_offset_buffer[D3dResources::SWAPCHAIN_BUFFERCOUNT];
-	Microsoft::WRL::ComPtr <ID3D12Resource> m_linker_buffer[D3dResources::SWAPCHAIN_BUFFERCOUNT];
-	Microsoft::WRL::ComPtr <ID3D12Resource> m_linker_counter[D3dResources::SWAPCHAIN_BUFFERCOUNT];
+	Microsoft::WRL::ComPtr <ID3D12Resource> m_start_offset_buffer;
+	Microsoft::WRL::ComPtr <ID3D12Resource> m_linker_buffer;
+	Microsoft::WRL::ComPtr <ID3D12Resource> m_linker_counter;
 	D3dDescriptorHeapHelper m_per_pixel_linked_list_uavheap;
 	virtual void InitShader();
 	virtual void InitRootSignature();
@@ -145,4 +162,4 @@ public:
 	const DirectX::XMINT2 GAUSSIAN_TEXTURE_SIZE = { 128, 128 };
 	virtual void Init();
 	virtual void PopulateCommandList(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list, int buffer_index, const ViewInfo* p_view, const RenderProxy* p_render_proxy) ;
-};
+};*/

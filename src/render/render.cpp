@@ -1,7 +1,9 @@
 #include"renderer.h"
 #include"scene_renderer.h"
+#include "shading_model.h"
 #include<type_traits>
 #include<assert.h>
+#include "device.h"
 
 RendererModule::RendererModule():m_renderer_map()
 {
@@ -30,7 +32,7 @@ void RendererModule::RemoveSceneRenderer(WorldId world_id, HWND hwnd)
 }
 void RendererModule::CreateSceneRenderer(WorldId world_id, ViewportInfo viewport_infos)
 {
-	auto new_renderer=std::make_shared<SceneRenderer>(viewport_infos);
+	auto new_renderer=std::make_shared<SceneRenderer>(viewport_infos,D3DHelper::DeviceManager::GetDeviceManager()->GetDefaultDevice());
 	
 	m_renderer_map[CreateRendererID(world_id, viewport_infos.hwnd)] = new_renderer;
 }
@@ -59,17 +61,19 @@ template<class T>
 void RegisterShader(std::map < std::string, std::shared_ptr< ShadingModel> >& map)
 {
 	static_assert(std::is_base_of<ShadingModel, T>());
-	auto new_shader = std::make_shared<T>();
-	new_shader->Init();
+	std::shared_ptr< ShadingModel> new_shader = std::make_shared<T>();
+	auto default_device=D3DHelper::DeviceManager::GetDeviceManager()->GetDefaultDevice();
+	new_shader->RegisterDevice(default_device);
 	map[std::string(typeid(T).name())] = new_shader;
 }
 
 void RendererModule::InitShaders()
 {
 	m_shading_model.clear();
+	
 	RegisterShader<ScreenTriangleShadingModel>(m_shading_model);
 	RegisterShader<BasicMeshShadingModel>(m_shading_model);
-	RegisterShader<AlphaMeshShadingModel>(m_shading_model);
+	//RegisterShader<AlphaMeshShadingModel>(m_shading_model);
 	RegisterShader<GaussianSplattingShadingModel>(m_shading_model);
 }
 

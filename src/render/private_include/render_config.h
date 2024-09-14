@@ -1,0 +1,3 @@
+#pragma
+#define FRAME_BUFFER_COUNT (3)
+#define RENDERER_THREADS_NUM (1)

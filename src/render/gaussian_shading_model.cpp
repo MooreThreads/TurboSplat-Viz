@@ -1,3 +1,4 @@
+/*
 #include"shading_model.h"
 #include"d3d_helper.h"
 #include<assert.h>
@@ -60,8 +61,8 @@ static void CompileShaingModel6(LPCWSTR* pszArgs,int args_num, LPCWSTR source_fi
 	}
 
 	//
-// Save shader binary.
-//
+	// Save shader binary.
+	//
 	Microsoft::WRL::ComPtr<IDxcBlobUtf16> pShaderName = nullptr;
 	pResults->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(&pShader), &pShaderName);
 	if (pShader != nullptr)
@@ -183,7 +184,7 @@ void GaussianSplattingShadingModel::InitPSO()
 		pso_desc.CS.pShaderBytecode = m_clear_ppll_cs->GetBufferPointer();
 		pso_desc.CS.BytecodeLength = m_clear_ppll_cs->GetBufferSize();
 		pso_desc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
-		ThrowIfFailed(D3dResources::GetDevice()->CreateComputePipelineState(&pso_desc, IID_PPV_ARGS(&m_clear_ppll_pso)));
+		ThrowIfFailed(DeviceManager::GetDevice()->CreateComputePipelineState(&pso_desc, IID_PPV_ARGS(&m_clear_ppll_pso)));
 	}
 
 	//create ppll
@@ -227,7 +228,7 @@ void GaussianSplattingShadingModel::InitPSO()
 		D3D12_PIPELINE_STATE_STREAM_DESC streamDesc;
 		streamDesc.pPipelineStateSubobjectStream = &psoStream;
 		streamDesc.SizeInBytes = sizeof(psoStream);
-		ThrowIfFailed(D3dResources::GetDevice()->CreatePipelineState(&streamDesc, IID_PPV_ARGS(&m_create_ppll_pso)));
+		ThrowIfFailed(DeviceManager::GetDevice()->CreatePipelineState(&streamDesc, IID_PPV_ARGS(&m_create_ppll_pso)));
 	}
 
 	//render ppll
@@ -237,7 +238,7 @@ void GaussianSplattingShadingModel::InitPSO()
 		pso_desc.CS.pShaderBytecode = m_render_ppll_cs->GetBufferPointer();
 		pso_desc.CS.BytecodeLength = m_render_ppll_cs->GetBufferSize();
 		pso_desc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
-		ThrowIfFailed(D3dResources::GetDevice()->CreateComputePipelineState(&pso_desc, IID_PPV_ARGS(&m_render_ppll_pso)));
+		ThrowIfFailed(DeviceManager::GetDevice()->CreateComputePipelineState(&pso_desc, IID_PPV_ARGS(&m_render_ppll_pso)));
 	}
 }
 void GaussianSplattingShadingModel::InitResources()
@@ -249,15 +250,15 @@ void GaussianSplattingShadingModel::InitResources()
 	auto counter_desc = CD3DX12_RESOURCE_DESC::Buffer(sizeof(int), D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
 	auto target_desc = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R8G8B8A8_UNORM, MAX_SCREEN_SIZE.x, MAX_SCREEN_SIZE.y,1,1,1,0, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
 	auto gaussian_texture_desc = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R32_FLOAT, GAUSSIAN_TEXTURE_SIZE.x, GAUSSIAN_TEXTURE_SIZE.y,1,1,1,0);
-	ThrowIfFailed(D3dResources::GetDevice()->CreateCommittedResource(&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT), D3D12_HEAP_FLAG_NONE, &counter_desc,
+	ThrowIfFailed(DeviceManager::GetDevice()->CreateCommittedResource(&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT), D3D12_HEAP_FLAG_NONE, &counter_desc,
 		D3D12_RESOURCE_STATE_COMMON, nullptr, IID_PPV_ARGS(&m_frame_resources.node_counter)));
-	ThrowIfFailed(D3dResources::GetDevice()->CreateCommittedResource(&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT), D3D12_HEAP_FLAG_NONE, &startoffset_buffer_desc,
+	ThrowIfFailed(DeviceManager::GetDevice()->CreateCommittedResource(&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT), D3D12_HEAP_FLAG_NONE, &startoffset_buffer_desc,
 		D3D12_RESOURCE_STATE_COMMON, nullptr, IID_PPV_ARGS(&m_frame_resources.start_offset_buffer)));
-	ThrowIfFailed(D3dResources::GetDevice()->CreateCommittedResource(&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT), D3D12_HEAP_FLAG_NONE, &node_buffer_desc,
+	ThrowIfFailed(DeviceManager::GetDevice()->CreateCommittedResource(&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT), D3D12_HEAP_FLAG_NONE, &node_buffer_desc,
 		D3D12_RESOURCE_STATE_COMMON, nullptr, IID_PPV_ARGS(&m_frame_resources.node_buffer)));
-	ThrowIfFailed(D3dResources::GetDevice()->CreateCommittedResource(&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT), D3D12_HEAP_FLAG_NONE, &target_desc,
+	ThrowIfFailed(DeviceManager::GetDevice()->CreateCommittedResource(&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT), D3D12_HEAP_FLAG_NONE, &target_desc,
 		D3D12_RESOURCE_STATE_COMMON, nullptr, IID_PPV_ARGS(&m_frame_resources.target_buffer)));
-	ThrowIfFailed(D3dResources::GetDevice()->CreateCommittedResource(&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT), D3D12_HEAP_FLAG_NONE, &gaussian_texture_desc,
+	ThrowIfFailed(DeviceManager::GetDevice()->CreateCommittedResource(&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT), D3D12_HEAP_FLAG_NONE, &gaussian_texture_desc,
 		D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS(&m_frame_resources.gaussian_texture_buffer)));
 	m_frame_resources.bUpload = false;
 
@@ -332,18 +333,18 @@ void GaussianSplattingShadingModel::InitResources()
 
 	//slot 0-1: input srv
 	// slot 2 :gaussian texture srv
-	D3dResources::GetDevice()->CreateShaderResourceView(m_frame_resources.gaussian_texture_buffer.Get(), &gaussian_texture_srv_desc, descriptor_heap[2]);
+	DeviceManager::GetDevice()->CreateShaderResourceView(m_frame_resources.gaussian_texture_buffer.Get(), &gaussian_texture_srv_desc, descriptor_heap[2]);
 	//slot 3:5: uav for create ppll
-	D3dResources::GetDevice()->CreateUnorderedAccessView(m_frame_resources.start_offset_buffer.Get(), nullptr, &startoffset_uav_desc, descriptor_heap[3]);
-	D3dResources::GetDevice()->CreateUnorderedAccessView(m_frame_resources.node_buffer.Get(), m_frame_resources.node_counter.Get(), &node_buffer_uav_desc, descriptor_heap[4]);
-	D3dResources::GetDevice()->CreateUnorderedAccessView(m_frame_resources.node_counter.Get(), nullptr, &node_counter_uav_desc, descriptor_heap[5]);
+	DeviceManager::GetDevice()->CreateUnorderedAccessView(m_frame_resources.start_offset_buffer.Get(), nullptr, &startoffset_uav_desc, descriptor_heap[3]);
+	DeviceManager::GetDevice()->CreateUnorderedAccessView(m_frame_resources.node_buffer.Get(), m_frame_resources.node_counter.Get(), &node_buffer_uav_desc, descriptor_heap[4]);
+	DeviceManager::GetDevice()->CreateUnorderedAccessView(m_frame_resources.node_counter.Get(), nullptr, &node_counter_uav_desc, descriptor_heap[5]);
 	
 	//slot 6-8: srv for render ppll
-	D3dResources::GetDevice()->CreateShaderResourceView(m_frame_resources.start_offset_buffer.Get(), &startoffset_srv_desc, descriptor_heap[6]);
-	D3dResources::GetDevice()->CreateShaderResourceView(m_frame_resources.node_buffer.Get(), &node_buffer_srv_desc, descriptor_heap[7]);
-	D3dResources::GetDevice()->CreateShaderResourceView(m_frame_resources.gaussian_texture_buffer.Get(), &gaussian_texture_srv_desc, descriptor_heap[8]);
+	DeviceManager::GetDevice()->CreateShaderResourceView(m_frame_resources.start_offset_buffer.Get(), &startoffset_srv_desc, descriptor_heap[6]);
+	DeviceManager::GetDevice()->CreateShaderResourceView(m_frame_resources.node_buffer.Get(), &node_buffer_srv_desc, descriptor_heap[7]);
+	DeviceManager::GetDevice()->CreateShaderResourceView(m_frame_resources.gaussian_texture_buffer.Get(), &gaussian_texture_srv_desc, descriptor_heap[8]);
 	//slot 9:uav for render ppll
-	D3dResources::GetDevice()->CreateUnorderedAccessView(m_frame_resources.target_buffer.Get(), nullptr, &target_uav_desc, descriptor_heap[9]);
+	DeviceManager::GetDevice()->CreateUnorderedAccessView(m_frame_resources.target_buffer.Get(), nullptr, &target_uav_desc, descriptor_heap[9]);
 
 
 
@@ -390,7 +391,7 @@ void GaussianSplattingShadingModel::InitRootSignature()
 		Microsoft::WRL::ComPtr<ID3DBlob> error;
 		ThrowIfFailed(D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &serialized_signature_desc, &error));
 
-		ThrowIfFailed(D3dResources::GetDevice()->CreateRootSignature(0, serialized_signature_desc->GetBufferPointer(), serialized_signature_desc->GetBufferSize(), IID_PPV_ARGS(&m_root_signature_create_ppll)));
+		ThrowIfFailed(DeviceManager::GetDevice()->CreateRootSignature(0, serialized_signature_desc->GetBufferPointer(), serialized_signature_desc->GetBufferSize(), IID_PPV_ARGS(&m_root_signature_create_ppll)));
 	}
 	//init render ppll root signature
 	{
@@ -407,7 +408,7 @@ void GaussianSplattingShadingModel::InitRootSignature()
 		Microsoft::WRL::ComPtr<ID3DBlob> error;
 		HRESULT result=D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &serialized_signature_desc, &error);
 		CheckResult(result, error);
-		ThrowIfFailed(D3dResources::GetDevice()->CreateRootSignature(0, serialized_signature_desc->GetBufferPointer(), serialized_signature_desc->GetBufferSize(), IID_PPV_ARGS(&m_root_signature_render_ppll)));
+		ThrowIfFailed(DeviceManager::GetDevice()->CreateRootSignature(0, serialized_signature_desc->GetBufferPointer(), serialized_signature_desc->GetBufferSize(), IID_PPV_ARGS(&m_root_signature_render_ppll)));
 	}
 }
 
@@ -434,7 +435,7 @@ void GaussianSplattingShadingModel::UploadTexture(Microsoft::WRL::ComPtr<ID3D12G
 	const UINT64 uploadBufferSize = GetRequiredIntermediateSize(m_frame_resources.gaussian_texture_buffer.Get(), 0, 1);
 
 	// Create the GPU upload buffer.
-	ThrowIfFailed(D3dResources::GetDevice()->CreateCommittedResource(
+	ThrowIfFailed(DeviceManager::GetDevice()->CreateCommittedResource(
 		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
 		D3D12_HEAP_FLAG_NONE,
 		&CD3DX12_RESOURCE_DESC::Buffer(uploadBufferSize),
@@ -492,7 +493,7 @@ void GaussianSplattingShadingModel::PopulateCommandList(Microsoft::WRL::ComPtr<I
 	batch_buffer.world_transform = p_render_proxy->world_transform;
 	command_list6->SetGraphicsRoot32BitConstants(ViewCBufferIndex, sizeof(ViewBuffer) / 4, &view_buffer, 0);
 	command_list6->SetGraphicsRoot32BitConstants(BatchCBufferIndex, sizeof(BatchBuffer) / 4, &batch_buffer, 0);
-	D3dResources::GetDevice()->CopyDescriptorsSimple(2, descriptor_heap[0], p_proxy->device_static_resource->descriptor_heap[0], D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	DeviceManager::GetDevice()->CopyDescriptorsSimple(2, descriptor_heap[0], p_proxy->device_static_resource->descriptor_heap[0], D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	command_list6->SetGraphicsRootDescriptorTable(2, descriptor_heap.GetGPU(0));
 	command_list6->DispatchMesh(p_proxy->clusters_buffer.size(), 1, 1);
 
@@ -501,4 +502,4 @@ void GaussianSplattingShadingModel::PopulateCommandList(Microsoft::WRL::ComPtr<I
 	create_ppll_barrier.UAV.pResource = m_frame_resources.node_buffer.Get();
 	command_list6->ResourceBarrier(1, &create_ppll_barrier);
 
-}
+}*/

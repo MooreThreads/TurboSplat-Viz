@@ -2,11 +2,11 @@
 #include<map>
 #include<memory>
 #include"viewport_info.h"
-#include "shading_model.h"
 
 typedef HWND RendererID;
 class SceneRenderer;
 class Scene;
+class ShadingModel;
 
 class RENDER_MODULE_API RendererModule
 {

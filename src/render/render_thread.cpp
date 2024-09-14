@@ -2,28 +2,28 @@
 #include"render_threads_pool.h"
 #include"d3d_helper.h"
 #include<assert.h>
+#include"device.h"
 
-RenderThread::RenderThread(Microsoft::WRL::ComPtr<ID3D12CommandQueue> command_queue, std::shared_ptr<RenderThreadsPool> threadpool): 
+RenderThread::RenderThread(Microsoft::WRL::ComPtr<ID3D12CommandQueue> command_queue, std::shared_ptr<RenderThreadsPool> threadpool, std::shared_ptr<D3DHelper::Device> device):
 	m_cur_allocator_index(0), m_stop(true),m_command_queue_ref(command_queue),m_threadpool(threadpool)
 {
-	auto device = D3dResources::GetDevice();
 	//init allocator and commmind list
-	for(int i=0;i<D3dResources::SWAPCHAIN_BUFFERCOUNT;i++)
-		ThrowIfFailed(device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_command_allocator[i])));
-	ThrowIfFailed(device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_command_allocator[0].Get(), nullptr, IID_PPV_ARGS(&m_command_list)));
+	for (int i = 0; i < FRAME_BUFFER_COUNT; i++)
+	{
+		ThrowIfFailed(device->GetDevice()->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_frame_resources[i].command_allocator)));
+		m_frame_resources[i].command_allocator->SetName(L"RenderThreadCommandAllocator");
+		D3D12_DESCRIPTOR_HEAP_DESC heap_desc = {};
+		heap_desc.NumDescriptors = 1024;
+		heap_desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+		heap_desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+		m_frame_resources[i].binded_heaps[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV].Init(heap_desc,device);
+		heap_desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
+		m_frame_resources[i].binded_heaps[D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER].Init(heap_desc, device);
+
+	}
+	ThrowIfFailed(device->GetDevice()->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_frame_resources[0].command_allocator.Get(), nullptr, IID_PPV_ARGS(&m_command_list)));
 	ThrowIfFailed(m_command_list->Close());
 
-	/*
-	UINT NonNullHeaps = 0;
-	ID3D12DescriptorHeap* HeapsToBind[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES];
-	for (UINT i = 0; i < D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES; ++i)
-	{
-		ID3D12DescriptorHeap* HeapIter = m_CurrentDescriptorHeaps[i];
-		if (HeapIter != nullptr)
-			HeapsToBind[NonNullHeaps++] = HeapIter;
-	}
-	if (NonNullHeaps > 0)
-		m_command_list->SetDescriptorHeaps(NonNullHeaps, HeapsToBind);*/
 }
 
 
@@ -31,9 +31,9 @@ RenderThread::RenderThread(RenderThread&& other) noexcept
 {
 	m_cur_allocator_index = other.m_cur_allocator_index;
 	m_stop = other.m_stop.load();
-	for (int i = 0; i < D3dResources::SWAPCHAIN_BUFFERCOUNT; i++)
+	for (int i = 0; i < FRAME_BUFFER_COUNT; i++)
 	{
-		m_command_allocator[i] = other.m_command_allocator[i];
+		m_frame_resources[i] = other.m_frame_resources[i];
 	}
 	m_command_list = other.m_command_list;
 
@@ -64,8 +64,14 @@ bool RenderThread::WaitTaskQueueReady()
 
 void RenderThread::FrameInit()
 {
-	ThrowIfFailed(m_command_allocator[m_cur_allocator_index]->Reset());
-	ThrowIfFailed(m_command_list->Reset(m_command_allocator[m_cur_allocator_index].Get(), nullptr));
+	ThrowIfFailed(m_frame_resources[m_cur_allocator_index].command_allocator->Reset());
+	m_frame_resources[m_cur_allocator_index].binded_heaps[0].ResetStack();
+	m_frame_resources[m_cur_allocator_index].binded_heaps[1].ResetStack();
+	ThrowIfFailed(m_command_list->Reset(m_frame_resources[m_cur_allocator_index].command_allocator.Get(), nullptr));
+
+	ID3D12DescriptorHeap* heaps_array[] = {m_frame_resources[m_cur_allocator_index].binded_heaps[0].GetHeap().Get(),
+		m_frame_resources[m_cur_allocator_index].binded_heaps[1].GetHeap().Get()};
+	m_command_list->SetDescriptorHeaps(2, heaps_array);
 }
 
 void RenderThread::FrameFinish()
@@ -75,7 +81,7 @@ void RenderThread::FrameFinish()
 	m_command_queue_ref->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 
 	std::shared_ptr<RenderThreadsPool> pool = m_threadpool.lock();
-	m_cur_allocator_index = (m_cur_allocator_index + 1) % D3dResources::SWAPCHAIN_BUFFERCOUNT;
+	m_cur_allocator_index = (m_cur_allocator_index + 1) % FRAME_BUFFER_COUNT;
 	{
 		std::unique_lock<std::mutex> lg(pool->mutex);
 		int result = pool->finish_num.fetch_add(1);
@@ -127,7 +133,7 @@ void RenderThread::ThreadRun_Internel()
 		RenderTask task;
 		while (pool->PopRenderTask(task)&& m_stop==false)
 		{
-			task(m_command_list);
+			task(m_command_list, m_frame_resources[m_cur_allocator_index].binded_heaps);
 		}
 		FrameFinish();
 	}

@@ -59,13 +59,6 @@ public:
 	virtual ~StaticMesh() {};
 };
 
-class AlphaStaticMesh :public StaticMesh
-{
-public:
-	AlphaStaticMesh(std::shared_ptr<World> world);
-	AlphaStaticMesh(std::shared_ptr<World> world, DirectX::XMFLOAT3 position, DirectX::XMFLOAT3 scale, DirectX::XMFLOAT3 rotation);
-	virtual ~AlphaStaticMesh() {};
-};
 
 class GaussianPoints :public StaticMesh
 {
@@ -73,6 +66,9 @@ protected:
 	void GenDefaultData();
 	void GenProfileData();
 	void load(std::string);
+
+	virtual void Serialization(std::vector<uint8_t>& output);
+	virtual void Deserialization(const std::vector<uint8_t>& data);
 public:
 	std::vector<DirectX::XMFLOAT3X3> m_cov3d;
 	std::vector<std::vector<int>> m_cluster;

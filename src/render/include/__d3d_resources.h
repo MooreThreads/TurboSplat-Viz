@@ -4,24 +4,22 @@
 #include <dxgi1_6.h>
 #include "d3dx12.h"
 
-class D3dResources
+class DeviceManager
 {
-
-
 private:
 	Microsoft::WRL::ComPtr<ID3D12Device2> m_device;
-	Microsoft::WRL::ComPtr<IDXGIFactory4> m_factory;
 	Microsoft::WRL::ComPtr<IDXGIAdapter1> m_hardware_adapter;
-	static D3dResources* GetInst();
+	static DeviceManager* GetInst();
 public:
 	static const int SWAPCHAIN_BUFFERCOUNT = 3;
-	D3dResources();
+	DeviceManager();
 	void Init();
 	static Microsoft::WRL::ComPtr<ID3D12Device2> GetDevice();
-	static Microsoft::WRL::ComPtr<IDXGIFactory4> GetFactory();
 	static Microsoft::WRL::ComPtr<IDXGIAdapter1> GetHardwareAdapter();
-
 };
+
+
+
 
 class D3dDescriptorHeapHelper
 {

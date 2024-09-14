@@ -1,5 +1,4 @@
 #include"main_loop.h"
-#include"render_threads_pool.h"
 #include "screen_splash.h"
 #include"renderer.h"
 #include<assert.h>
@@ -15,7 +14,7 @@ void Viewport::Draw(int frame_count)
 	RendererModule::GetInst()->Render(m_world->GetScene(), m_info, frame_count);
 }
 
-MainLoop::MainLoop():m_frame_counter(0)
+MainLoop::MainLoop():m_frame_counter(1)
 {
 
 }
