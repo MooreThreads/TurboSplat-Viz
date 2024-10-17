@@ -116,6 +116,39 @@ void World::DoRenderUpdates(ViewportInfo& viewport_info)
 		view.focal = camera->GetFocal(viewport_info.width, viewport_info.height);
 		view.render_target_view = CD3DX12_CPU_DESCRIPTOR_HANDLE();
 
+		//frustum_plane
+		auto view_proj_matrix = DirectX::XMMatrixMultiply(view.view_matrix, view.project_matrix);
+		//left plane
+		view.frustum_plane[0].x = view_proj_matrix.r[0].m128_f32[3] + view_proj_matrix.r[0].m128_f32[0];
+		view.frustum_plane[0].y = view_proj_matrix.r[1].m128_f32[3] + view_proj_matrix.r[1].m128_f32[0];
+		view.frustum_plane[0].z = view_proj_matrix.r[2].m128_f32[3] + view_proj_matrix.r[2].m128_f32[0];
+		view.frustum_plane[0].w = view_proj_matrix.r[3].m128_f32[3] + view_proj_matrix.r[3].m128_f32[0];
+		//right plane
+		view.frustum_plane[1].x = view_proj_matrix.r[0].m128_f32[3] - view_proj_matrix.r[0].m128_f32[0];
+		view.frustum_plane[1].y = view_proj_matrix.r[1].m128_f32[3] - view_proj_matrix.r[1].m128_f32[0];
+		view.frustum_plane[1].z = view_proj_matrix.r[2].m128_f32[3] - view_proj_matrix.r[2].m128_f32[0];
+		view.frustum_plane[1].w = view_proj_matrix.r[3].m128_f32[3] - view_proj_matrix.r[3].m128_f32[0];
+		//bottom plane
+		view.frustum_plane[2].x = view_proj_matrix.r[0].m128_f32[3] + view_proj_matrix.r[0].m128_f32[1];
+		view.frustum_plane[2].y = view_proj_matrix.r[1].m128_f32[3] + view_proj_matrix.r[1].m128_f32[1];
+		view.frustum_plane[2].z = view_proj_matrix.r[2].m128_f32[3] + view_proj_matrix.r[2].m128_f32[1];
+		view.frustum_plane[2].w = view_proj_matrix.r[3].m128_f32[3] + view_proj_matrix.r[3].m128_f32[1];
+		//right plane
+		view.frustum_plane[3].x = view_proj_matrix.r[0].m128_f32[3] - view_proj_matrix.r[0].m128_f32[1];
+		view.frustum_plane[3].y = view_proj_matrix.r[1].m128_f32[3] - view_proj_matrix.r[1].m128_f32[1];
+		view.frustum_plane[3].z = view_proj_matrix.r[2].m128_f32[3] - view_proj_matrix.r[2].m128_f32[1];
+		view.frustum_plane[3].w = view_proj_matrix.r[3].m128_f32[3] - view_proj_matrix.r[3].m128_f32[1];
+		//near plane
+		view.frustum_plane[4].x = view_proj_matrix.r[0].m128_f32[2];
+		view.frustum_plane[4].y = view_proj_matrix.r[1].m128_f32[2];
+		view.frustum_plane[4].z = view_proj_matrix.r[2].m128_f32[2];
+		view.frustum_plane[4].w = view_proj_matrix.r[3].m128_f32[2];
+		//far plane
+		view.frustum_plane[5].x = view_proj_matrix.r[0].m128_f32[3] - view_proj_matrix.r[0].m128_f32[2];
+		view.frustum_plane[5].y = view_proj_matrix.r[1].m128_f32[3] - view_proj_matrix.r[1].m128_f32[2];
+		view.frustum_plane[5].z = view_proj_matrix.r[2].m128_f32[3] - view_proj_matrix.r[2].m128_f32[2];
+		view.frustum_plane[5].w = view_proj_matrix.r[3].m128_f32[3] - view_proj_matrix.r[3].m128_f32[2];
+
 		viewport_info.views.push_back(view);
 	}
 }

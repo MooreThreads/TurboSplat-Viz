@@ -8,7 +8,9 @@ struct ViewInfo
 {
 	DirectX::XMMATRIX view_matrix;
 	DirectX::XMMATRIX project_matrix;
+	DirectX::XMFLOAT4 frustum_plane[6];
 	DirectX::XMFLOAT2 focal;
+	
 	CD3DX12_CPU_DESCRIPTOR_HANDLE render_target_view;
 	Microsoft::WRL::ComPtr<ID3D12Resource> render_target_buffer;
 	CD3DX12_CPU_DESCRIPTOR_HANDLE depth_stencil_view;

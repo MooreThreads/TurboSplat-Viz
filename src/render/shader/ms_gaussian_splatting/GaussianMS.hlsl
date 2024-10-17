@@ -11,6 +11,7 @@ cbuffer view_cbuffer : register(b0)
 cbuffer batch_cbuffer : register(b1)
 {
     float4x4 world_transform;
+    int clusters_num;
 }
 
 StructuredBuffer<GaussianPoint> gaussian_points : register(t0);
@@ -22,11 +23,12 @@ StructuredBuffer<GaussianCluster> gaussian_clusters : register(t1);
 void main(
     uint gtid : SV_GroupThreadID,
     uint gid : SV_GroupID,
+    in payload Payload payload,
     out indices uint3 tris[128],
     out vertices VertexOut verts[256]
 )
 {
-    GaussianCluster cluster = gaussian_clusters[gid];
+    GaussianCluster cluster = gaussian_clusters[payload.ClusterIndices[gid]];
 
     uint VertexCount = cluster.points_num * 4;
     uint TriangleCount = cluster.points_num * 2;

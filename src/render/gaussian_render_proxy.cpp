@@ -103,6 +103,11 @@ void GaussianRenderProxy::UploadStatic(Microsoft::WRL::ComPtr<ID3D12GraphicsComm
 
 int GaussianRenderProxy::GetVertexCountPerInstance() const
 {
+    return points_buffer.size();
+}
+
+int GaussianRenderProxy::GetClusterCountPerInstance() const
+{
     return clusters_buffer.size();
 }
 

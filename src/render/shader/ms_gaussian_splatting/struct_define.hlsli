@@ -19,3 +19,8 @@ struct VertexOut
     float2 UV : TEXCOORD0;
     float4 color:COLOR0;
 };
+
+struct Payload
+{
+    uint ClusterIndices[32];
+};

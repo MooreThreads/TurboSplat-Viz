@@ -74,7 +74,11 @@ void BVHManager::RecursiveBuild(std::shared_ptr<BVHNode> cur_node)
 	int max_ext_dim = -1;
 	for (int i = 0; i < 3; i++)
 	{
-		max_extension=std::max(max_extension,cur_node->aabb.extension[i]);
+		if (cur_node->aabb.extension[i] > max_extension)
+		{
+			max_ext_dim = i;
+			max_extension = cur_node->aabb.extension[i];
+		}
 	}
 	std::sort(cur_node->childs.begin(), cur_node->childs.end(), [max_ext_dim](const std::shared_ptr<BVHNode>& a, const std::shared_ptr<BVHNode>& b) {
 		return a->aabb.origin[max_ext_dim] > b->aabb.origin[max_ext_dim];

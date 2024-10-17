@@ -25,6 +25,7 @@ public:
 	virtual void UploadStatic(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list)=0;
 	virtual void UploadDynamic(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list,int game_frame) = 0;
 	virtual int GetVertexCountPerInstance() const =0;
+	virtual int GetClusterCountPerInstance() const = 0;
 };
 
 struct TriangleDeviceStaticResource;
@@ -44,6 +45,7 @@ public:
 	virtual void UploadStatic(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list);
 	virtual void UploadDynamic(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list,int game_frame);
 	virtual int GetVertexCountPerInstance() const;
+	virtual int GetClusterCountPerInstance() const { return 0; }
 };
 
 struct GaussianDeviceStaticResource;
@@ -74,4 +76,5 @@ public:
 	virtual void UploadStatic(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list);
 	virtual void UploadDynamic(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list,int game_frame) {};
 	virtual int GetVertexCountPerInstance() const;
+	virtual int GetClusterCountPerInstance() const;
 };
