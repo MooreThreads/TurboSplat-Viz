@@ -16,9 +16,7 @@ protected:
 	Microsoft::WRL::ComPtr<ID3DBlob> m_culling_shader;
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_clear_pso;
 
-	Microsoft::WRL::ComPtr<ID3D12Resource> counter_buffer;
-	Microsoft::WRL::ComPtr<ID3D12Resource> visible_cluster_buffer;
-	const int MAX_CLUSTER_NUM = 1024 * 1024;
+	int MAX_CLUSTER_NUM;
 
 	virtual void InitShaders();
 	virtual void InitRootSignature();
@@ -31,6 +29,8 @@ protected:
 
 public:
 	MeshGaussianClusterCulling();
+	virtual void Init(std::shared_ptr<D3DHelper::Device> device, Microsoft::WRL::ComPtr<ID3D12Resource> out_counter_buffer,
+		Microsoft::WRL::ComPtr<ID3D12Resource> out_visible_cluster_buffer, const int MAX_CLUSTER_NUM);
 	virtual void Draw(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list,
 		D3DHelper::StaticDescriptorStack(&param_stacks)[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES],
 		int buffer_index,
@@ -41,6 +41,11 @@ public:
 		int buffer_index,
 		const ViewInfo* p_view,
 		const RenderProxy* proxy);
+};
+
+class MeshGaussianDepthSort :public ComputePipeline
+{
+
 };
 
 class MeshGaussianPipeline :public DefaultGraphicPipeline
@@ -81,6 +86,9 @@ public:
 	const int GAUSSIAN_TEXTURE_LOD = 7;
 
 	MeshGaussianPipeline();
+	virtual void Init(std::shared_ptr<D3DHelper::Device> device, Microsoft::WRL::ComPtr<ID3D12Resource> in_counter_buffer,
+		Microsoft::WRL::ComPtr<ID3D12Resource> in_visible_cluster_buffer, const int MAX_CLUSTER_NUM);
+	//todo indirect dispatch
 	virtual void Draw(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list,
 		D3DHelper::StaticDescriptorStack(&param_stacks)[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES],
 		int buffer_index,

@@ -13,6 +13,11 @@ fov(fov), near_z(near_z), far_z(far_z), position(position), rotation(rotation)
 
 }
 
+void Camera::tick()
+{
+	//rotation.y += 0.01f;
+}
+
 DirectX::XMMATRIX Camera::GetViewMatrix()
 {
 	DirectX::XMMATRIX camera_rot = DirectX::XMMatrixRotationRollPitchYaw(rotation.x / 180 * DirectX::XM_PI, rotation.y / 180 * DirectX::XM_PI, rotation.z / 180 * DirectX::XM_PI);

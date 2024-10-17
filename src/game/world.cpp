@@ -71,6 +71,11 @@ void World::Tick(int cur_frame, int duration)
 			obj->tick();
 		}
 	}
+	for (auto id_and_camera : m_cameras)
+	{
+		std::shared_ptr<Camera> camera = id_and_camera.second;
+		camera->tick();
+	}
 
 	//modify m_objs
 	for (auto pairs : m_new_objs)

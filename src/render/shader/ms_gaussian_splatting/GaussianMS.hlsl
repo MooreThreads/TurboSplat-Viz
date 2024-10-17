@@ -16,24 +16,28 @@ cbuffer batch_cbuffer : register(b1)
 
 StructuredBuffer<GaussianPoint> gaussian_points : register(t0);
 StructuredBuffer<GaussianCluster> gaussian_clusters : register(t1);
-
+Texture2D<float> gaussian_texture : register(t2);
+ByteAddressBuffer visible_clusters_num : register(t3);
+Buffer<int> visible_clusters : register(t4);
 
 [NumThreads(64, 1, 1)]
 [OutputTopology("triangle")]
 void main(
     uint gtid : SV_GroupThreadID,
     uint gid : SV_GroupID,
-    in payload Payload payload,
     out indices uint3 tris[128],
     out vertices VertexOut verts[256]
 )
 {
-    GaussianCluster cluster = gaussian_clusters[payload.ClusterIndices[gid]];
-
+    GaussianCluster cluster;
+    cluster.points_num = 0;
+    if (gid < visible_clusters_num.Load(0))
+    {
+        cluster = gaussian_clusters[visible_clusters[gid]];
+    }
     uint VertexCount = cluster.points_num * 4;
     uint TriangleCount = cluster.points_num * 2;
     SetMeshOutputCounts(VertexCount, TriangleCount);
-
     if (gtid < cluster.points_num)
     {
         GaussianPoint gaussian_point = gaussian_points[cluster.point_offset + gtid];
@@ -42,16 +46,16 @@ void main(
         float4 homo_pos = mul(project_transform, view_pos);
         float4 ndc_pos = homo_pos / homo_pos.w;
         
-        //proj 3d -> 2d
+    //proj 3d -> 2d
         float3x3 world_transform3x3 = world_transform;
         float3x3 world_cov3d = mul(mul(world_transform3x3, gaussian_point.cov3d), transpose(world_transform3x3)); //apply world transform
         float3x3 ray_space_transform = float3x3(
-            focal.x / view_pos.z, 0, -focal.x * view_pos.x / (view_pos.z * view_pos.z),
-            0, focal.y / view_pos.z, -focal.y * view_pos.y / (view_pos.z * view_pos.z),
-            0, 0, 0);
+        focal.x / view_pos.z, 0, -focal.x * view_pos.x / (view_pos.z * view_pos.z),
+        0, focal.y / view_pos.z, -focal.y * view_pos.y / (view_pos.z * view_pos.z),
+        0, 0, 0);
         float2x2 cov2d = mul(mul(ray_space_transform, world_cov3d), transpose(ray_space_transform));
         
-        //eigen(vec2d)
+    //eigen(vec2d)
         float det = cov2d[0][0] * cov2d[1][1] - cov2d[0][1] * cov2d[1][0];
         float mid = 0.5 * (cov2d[0][0] + cov2d[1][1]);
         float temp = sqrt(max((mid * mid - det), 1e-9f));
@@ -64,10 +68,10 @@ void main(
             eigen_vec_0 = normalize(float2(1, eigen_vec_y.x));
             eigen_vec_1 = normalize(float2(1, eigen_vec_y.y));
         }
-        //alpha
+    //alpha
         float opacity_coefficient = 2 * log(255 * max(1 / 255, gaussian_point.color.w));
         
-        //Ellipse
+    //Ellipse
         float2 axis0 = eigen_vec_0 * sqrt(eigen_val.x * opacity_coefficient) / (viewport_size * 0.5);
         float2 axis1 = eigen_vec_1 * sqrt(eigen_val.y * opacity_coefficient) / (viewport_size * 0.5);
         if (ndc_pos.x < -1.3f || ndc_pos.x > 1.3f || ndc_pos.y < -1.3f || ndc_pos.y > 1.3f || ndc_pos.z < 0 || ndc_pos.z > 1 || gaussian_point.color.w < 1 / 255.0f)
@@ -76,7 +80,7 @@ void main(
             axis1 = axis0;
         }
         
-        //2d gaussian mean
+    //2d gaussian mean
         float2 mean = float2(homo_pos.x / homo_pos.w, homo_pos.y / homo_pos.w);
         
         VertexOut vertex[4];

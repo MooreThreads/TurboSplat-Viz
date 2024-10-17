@@ -11,6 +11,42 @@ MeshGaussianClusterCulling::MeshGaussianClusterCulling() :ComputePipeline()
 
 }
 
+void MeshGaussianClusterCulling::Init(std::shared_ptr<D3DHelper::Device> device, Microsoft::WRL::ComPtr<ID3D12Resource> out_counter_buffer,
+	Microsoft::WRL::ComPtr<ID3D12Resource> out_visible_cluster_buffer, const int MAX_CLUSTER_NUM)
+{
+	ComputePipeline::Init(device);
+
+	this->MAX_CLUSTER_NUM = MAX_CLUSTER_NUM;
+
+	D3D12_DESCRIPTOR_HEAP_DESC heap_desc{};
+	heap_desc.NumDescriptors = 2;
+	heap_desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+	heap_desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+	m_heaps[D3D12_DESCRIPTOR_HEAP_TYPE::D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV].Init(heap_desc, m_device);
+
+	D3D12_UNORDERED_ACCESS_VIEW_DESC counter_uav_desc = {};
+	counter_uav_desc.Format = DXGI_FORMAT_R32_TYPELESS;
+	counter_uav_desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
+	counter_uav_desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_RAW;
+	counter_uav_desc.Buffer.CounterOffsetInBytes = 0;
+	counter_uav_desc.Buffer.FirstElement = 0;
+	counter_uav_desc.Buffer.NumElements = 1;
+	counter_uav_desc.Buffer.StructureByteStride = 0;
+	m_device->GetDevice()->CreateUnorderedAccessView(out_counter_buffer.Get(), nullptr, &counter_uav_desc,
+		m_heaps[D3D12_DESCRIPTOR_HEAP_TYPE::D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV][0]);
+
+	D3D12_UNORDERED_ACCESS_VIEW_DESC visible_cluster_uav_desc = {};
+	visible_cluster_uav_desc.Format = DXGI_FORMAT_R32_SINT;
+	visible_cluster_uav_desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
+	visible_cluster_uav_desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
+	visible_cluster_uav_desc.Buffer.CounterOffsetInBytes = 0;
+	visible_cluster_uav_desc.Buffer.FirstElement = 0;
+	visible_cluster_uav_desc.Buffer.NumElements = MAX_CLUSTER_NUM;
+	visible_cluster_uav_desc.Buffer.StructureByteStride = 0;
+	m_device->GetDevice()->CreateUnorderedAccessView(out_visible_cluster_buffer.Get(), nullptr, &visible_cluster_uav_desc,
+		m_heaps[D3D12_DESCRIPTOR_HEAP_TYPE::D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV][1]);
+}
+
 void MeshGaussianClusterCulling::InitShaders()
 {
 	{
@@ -58,37 +94,6 @@ void MeshGaussianClusterCulling::InitShaders()
 
 void MeshGaussianClusterCulling::InitResources()
 {
-	D3D12_DESCRIPTOR_HEAP_DESC heap_desc{};
-	heap_desc.NumDescriptors = 2;
-	heap_desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-	heap_desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-	m_heaps[D3D12_DESCRIPTOR_HEAP_TYPE::D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV].Init(heap_desc, m_device);
-	ThrowIfFailed(m_device->GetDevice()->CreateCommittedResource(&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT), D3D12_HEAP_FLAG_NONE,
-		&CD3DX12_RESOURCE_DESC::Buffer(sizeof(int), D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS), D3D12_RESOURCE_STATE_COMMON, nullptr, IID_PPV_ARGS(&counter_buffer)));
-	ThrowIfFailed(m_device->GetDevice()->CreateCommittedResource(&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT), D3D12_HEAP_FLAG_NONE,
-		&CD3DX12_RESOURCE_DESC::Buffer(sizeof(int)* MAX_CLUSTER_NUM, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS), D3D12_RESOURCE_STATE_COMMON, nullptr, IID_PPV_ARGS(&visible_cluster_buffer)));
-
-	D3D12_UNORDERED_ACCESS_VIEW_DESC counter_uav_desc = {};
-	counter_uav_desc.Format = DXGI_FORMAT_R32_TYPELESS;
-	counter_uav_desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
-	counter_uav_desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_RAW;
-	counter_uav_desc.Buffer.CounterOffsetInBytes = 0;
-	counter_uav_desc.Buffer.FirstElement = 0;
-	counter_uav_desc.Buffer.NumElements = 1;
-	counter_uav_desc.Buffer.StructureByteStride = 0;
-	m_device->GetDevice()->CreateUnorderedAccessView(counter_buffer.Get(),nullptr, &counter_uav_desc,
-		m_heaps[D3D12_DESCRIPTOR_HEAP_TYPE::D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV][0]);
-
-	D3D12_UNORDERED_ACCESS_VIEW_DESC visible_cluster_uav_desc = {};
-	visible_cluster_uav_desc.Format = DXGI_FORMAT_R32_UINT;
-	visible_cluster_uav_desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
-	visible_cluster_uav_desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
-	visible_cluster_uav_desc.Buffer.CounterOffsetInBytes = 0;
-	visible_cluster_uav_desc.Buffer.FirstElement = 0;
-	visible_cluster_uav_desc.Buffer.NumElements = MAX_CLUSTER_NUM;
-	visible_cluster_uav_desc.Buffer.StructureByteStride = 0;
-	m_device->GetDevice()->CreateUnorderedAccessView(visible_cluster_buffer.Get(), nullptr, &visible_cluster_uav_desc,
-		m_heaps[D3D12_DESCRIPTOR_HEAP_TYPE::D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV][1]);
 
 	return;
 }
@@ -179,6 +184,8 @@ void MeshGaussianClusterCulling::Dispatch(Microsoft::WRL::ComPtr<ID3D12GraphicsC
 	gaussian_render_proxy->CommitParams(command_list, param_stacks);
 	CommitDescriptors(param_stacks);
 
+	assert(MAX_CLUSTER_NUM > proxy->GetClusterCountPerInstance());
+
 	command_list->SetPipelineState(m_clear_pso.Get());
 	command_list->Dispatch(std::ceil(proxy->GetClusterCountPerInstance() / 256.0f), 1, 1);
 
@@ -192,28 +199,80 @@ MeshGaussianPipeline::MeshGaussianPipeline() :DefaultGraphicPipeline(), pipeline
 
 }
 
+void MeshGaussianPipeline::Init(std::shared_ptr<D3DHelper::Device> device, Microsoft::WRL::ComPtr<ID3D12Resource> in_counter_buffer,
+	Microsoft::WRL::ComPtr<ID3D12Resource> in_visible_cluster_buffer,const int MAX_CLUSTER_NUM)
+{
+	DefaultGraphicPipeline::Init(device);
+
+	//init descriptor heap
+	D3D12_DESCRIPTOR_HEAP_DESC heap_desc{};
+	heap_desc.NumDescriptors = 3;
+	heap_desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+	heap_desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+	m_heaps[D3D12_DESCRIPTOR_HEAP_TYPE::D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV].Init(heap_desc, m_device);
+
+	//init srv: gaussian texture
+	D3D12_SHADER_RESOURCE_VIEW_DESC gaussian_texture_srv_desc;
+	gaussian_texture_srv_desc.Format = DXGI_FORMAT_R32_FLOAT;
+	gaussian_texture_srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+	gaussian_texture_srv_desc.Texture2D.MipLevels = GAUSSIAN_TEXTURE_LOD;
+	gaussian_texture_srv_desc.Texture2D.PlaneSlice = 0;
+	gaussian_texture_srv_desc.Texture2D.MostDetailedMip = 0;
+	gaussian_texture_srv_desc.Texture2D.ResourceMinLODClamp = 0;
+	gaussian_texture_srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	m_device->GetDevice()->CreateShaderResourceView(gaussian_texture_buffer.Get(), &gaussian_texture_srv_desc,
+		m_heaps[D3D12_DESCRIPTOR_HEAP_TYPE::D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV][0]);
+
+	//init srv: counter
+	D3D12_SHADER_RESOURCE_VIEW_DESC counter_srv_desc;
+	counter_srv_desc.Format = DXGI_FORMAT_R32_TYPELESS;
+	counter_srv_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+	counter_srv_desc.Buffer.FirstElement = 0;
+	counter_srv_desc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_RAW;
+	counter_srv_desc.Buffer.NumElements = 1;
+	counter_srv_desc.Buffer.StructureByteStride = 0;
+	counter_srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	m_device->GetDevice()->CreateShaderResourceView(in_counter_buffer.Get(), &counter_srv_desc,
+		m_heaps[D3D12_DESCRIPTOR_HEAP_TYPE::D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV][1]);
+
+	//init srv: visible_cluster
+	D3D12_SHADER_RESOURCE_VIEW_DESC visible_cluster_srv_desc;
+	visible_cluster_srv_desc.Format = DXGI_FORMAT_R32_SINT;
+	visible_cluster_srv_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+	visible_cluster_srv_desc.Buffer.FirstElement = 0;
+	visible_cluster_srv_desc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
+	visible_cluster_srv_desc.Buffer.NumElements = MAX_CLUSTER_NUM;
+	visible_cluster_srv_desc.Buffer.StructureByteStride = 0;
+	visible_cluster_srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	m_device->GetDevice()->CreateShaderResourceView(in_visible_cluster_buffer.Get(), &visible_cluster_srv_desc,
+		m_heaps[D3D12_DESCRIPTOR_HEAP_TYPE::D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV][2]);
+
+	
+
+}
+
 void MeshGaussianPipeline::InitShaders()
 {
-	{
-		LPCWSTR hlsl_file_name = L"./shader/ms_gaussian_splatting/GaussianAS.hlsl";
-		LPCWSTR pszArgs[] =
-		{
-			hlsl_file_name,            // shader source file name for error reporting and for PIX shader source view.  
-			L"-E", L"main",              // Entry point.
-			L"-T", L"as_6_5",            // Target.
-			L"-Zi",L"-Qembed_debug",                      // Enable debug information (slim format)
-#if defined(_DEBUG)
-			L"-Od",
-#endif
-			//L"-D", L"MYDEFINE=1",        // A single define.
-			L"-Fd", L"./shader/ms_gaussian_splatting/GaussianPS.pdb",     // The file name of the pdb. This must either be supplied or the autogenerated file name must be used.
-			L"-Fo",L"./shader/ms_gaussian_splatting/GaussianPS.cso",
-			L"-Qstrip_reflect",          // Strip reflection into a separate blob. 
-		};
-		Microsoft::WRL::ComPtr<IDxcBlob> shader_out;
-		CompileShaingModel6(pszArgs, _countof(pszArgs), hlsl_file_name, shader_out);
-		shader_out.As(&m_amp_shader);
-	}
+//	{
+//		LPCWSTR hlsl_file_name = L"./shader/ms_gaussian_splatting/GaussianAS.hlsl";
+//		LPCWSTR pszArgs[] =
+//		{
+//			hlsl_file_name,            // shader source file name for error reporting and for PIX shader source view.  
+//			L"-E", L"main",              // Entry point.
+//			L"-T", L"as_6_5",            // Target.
+//			L"-Zi",L"-Qembed_debug",                      // Enable debug information (slim format)
+//#if defined(_DEBUG)
+//			L"-Od",
+//#endif
+//			//L"-D", L"MYDEFINE=1",        // A single define.
+//			L"-Fd", L"./shader/ms_gaussian_splatting/GaussianPS.pdb",     // The file name of the pdb. This must either be supplied or the autogenerated file name must be used.
+//			L"-Fo",L"./shader/ms_gaussian_splatting/GaussianPS.cso",
+//			L"-Qstrip_reflect",          // Strip reflection into a separate blob. 
+//		};
+//		Microsoft::WRL::ComPtr<IDxcBlob> shader_out;
+//		CompileShaingModel6(pszArgs, _countof(pszArgs), hlsl_file_name, shader_out);
+//		shader_out.As(&m_amp_shader);
+//	}
 
 	{
 		LPCWSTR hlsl_file_name = L"./shader/ms_gaussian_splatting/GaussianMS.hlsl";
@@ -280,7 +339,7 @@ void MeshGaussianPipeline::InitPSO()
 
 	D3DX12_MESH_SHADER_PIPELINE_STATE_DESC pso_desc = {};
 	pso_desc.pRootSignature = m_root_signature.Get();
-	pso_desc.AS = CD3DX12_SHADER_BYTECODE(m_amp_shader.Get());
+	//pso_desc.AS =  CD3DX12_SHADER_BYTECODE(m_amp_shader.Get());
 	pso_desc.MS = CD3DX12_SHADER_BYTECODE(m_vertex_shader.Get());
 	pso_desc.PS = CD3DX12_SHADER_BYTECODE(m_pixel_shader.Get());
 	pso_desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
@@ -303,7 +362,6 @@ void MeshGaussianPipeline::InitPSO()
 
 void MeshGaussianPipeline::InitResources()
 {
-	//create resource
 	auto gaussian_texture_desc = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R32_FLOAT, GAUSSIAN_TEXTURE_SIZE.x, GAUSSIAN_TEXTURE_SIZE.y, 1, GAUSSIAN_TEXTURE_LOD, 1, 0);
 	ThrowIfFailed(m_device->GetDevice()->CreateCommittedResource(&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT), D3D12_HEAP_FLAG_NONE, &gaussian_texture_desc,
 		D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS(&gaussian_texture_buffer)));
@@ -311,25 +369,6 @@ void MeshGaussianPipeline::InitResources()
 	const UINT64 uploadBufferSize = GetRequiredIntermediateSize(gaussian_texture_buffer.Get(), 0, GAUSSIAN_TEXTURE_LOD);
 	ThrowIfFailed(m_device->GetDevice()->CreateCommittedResource(&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD), D3D12_HEAP_FLAG_NONE,
 		&CD3DX12_RESOURCE_DESC::Buffer(uploadBufferSize), D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&gaussian_texture_upload_buffer)));
-
-	//init descriptor heap
-	D3D12_DESCRIPTOR_HEAP_DESC heap_desc{};
-	heap_desc.NumDescriptors = 1;
-	heap_desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-	heap_desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-	m_heaps[D3D12_DESCRIPTOR_HEAP_TYPE::D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV].Init(heap_desc, m_device);
-
-	//init view
-	D3D12_SHADER_RESOURCE_VIEW_DESC gaussian_texture_srv_desc;
-	gaussian_texture_srv_desc.Format = DXGI_FORMAT_R32_FLOAT;
-	gaussian_texture_srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-	gaussian_texture_srv_desc.Texture2D.MipLevels = GAUSSIAN_TEXTURE_LOD;
-	gaussian_texture_srv_desc.Texture2D.PlaneSlice = 0;
-	gaussian_texture_srv_desc.Texture2D.MostDetailedMip = 0;
-	gaussian_texture_srv_desc.Texture2D.ResourceMinLODClamp = 0;
-	gaussian_texture_srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-	m_device->GetDevice()->CreateShaderResourceView(gaussian_texture_buffer.Get(), &gaussian_texture_srv_desc,
-		m_heaps[D3D12_DESCRIPTOR_HEAP_TYPE::D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV][0]);
 
 	//init cpu data
 	cpu_gaussian_texture_buffer.resize(GAUSSIAN_TEXTURE_LOD);
@@ -369,7 +408,7 @@ void MeshGaussianPipeline::InitResources()
 			}
 		}
 	}
-
+	
 	return;
 }
 
@@ -411,7 +450,7 @@ void MeshGaussianPipeline::InitRootSignature()
 	rootParameters[0].InitAsConstants(sizeof(ViewBuffer) / 4, 0, 0, D3D12_SHADER_VISIBILITY_ALL);
 	rootParameters[1].InitAsConstants(sizeof(BatchBuffer) / 4, 1, 0, D3D12_SHADER_VISIBILITY_ALL);
 	CD3DX12_DESCRIPTOR_RANGE DescRange[1];
-	DescRange[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 3, 0);//points srv + clusters srv + texture srv
+	DescRange[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 5, 0);//points srv + clusters srv + texture srv + counter + visible_buffer
 	rootParameters[2].InitAsDescriptorTable(_countof(DescRange), DescRange, D3D12_SHADER_VISIBILITY_ALL);
 
 	CD3DX12_ROOT_SIGNATURE_DESC rootSignatureDesc;
@@ -476,5 +515,5 @@ void MeshGaussianPipeline::Draw(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList
 	Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList6> command_list6;
 	command_list.As(&command_list6);
 	assert(command_list6);
-	command_list6->DispatchMesh(std::ceil(proxy->GetClusterCountPerInstance() / 32.0f), 1, 1);
+	command_list6->DispatchMesh(proxy->GetClusterCountPerInstance(), 1, 1);
 }

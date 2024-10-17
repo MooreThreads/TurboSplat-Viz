@@ -70,6 +70,16 @@ private:
 	};
 	std::map<D3DHelper::Device*, PilelineList> m_device_pipeline_list;
 
+	struct IntermediateBuffer
+	{
+		Microsoft::WRL::ComPtr<ID3D12Resource> counter_buffer;
+		Microsoft::WRL::ComPtr<ID3D12Resource> visible_cluster_buffer;
+		
+	};
+	const int MAX_CLUSTER_NUM = 1024 * 1024;
+	std::map<D3DHelper::Device*, IntermediateBuffer> m_device_intermediate_buffer_list;
+
+
 public:
 	GaussianSplattingShadingModel();
 	virtual void RegisterDevice(std::shared_ptr<D3DHelper::Device> device);
