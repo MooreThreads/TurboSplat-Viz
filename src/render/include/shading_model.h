@@ -11,8 +11,13 @@ class RenderProxy;
 class ID3D12GraphicsCommandList;
 class DefaultGraphicPipeline;
 class StaticMeshGraphicPipeline;
-class MeshGaussianPipeline;
+
+class MeshGaussianClear;
 class MeshGaussianClusterCulling;
+class MeshGaussianFillData;
+class MeshGaussianSort;
+class MeshGaussianRaster;
+
 
 namespace D3DHelper
 {
@@ -65,18 +70,25 @@ class GaussianSplattingShadingModel :public ShadingModel
 {
 private:
 	struct PilelineList {
-		std::shared_ptr<MeshGaussianClusterCulling> gs_cluster_culling_pipeline;
-		std::shared_ptr<MeshGaussianPipeline> draw_mesh_gs_pipeline;
+		std::shared_ptr < MeshGaussianClear> gs_clear_pipeline;
+		std::shared_ptr <MeshGaussianClusterCulling> gs_cluster_culling_pipeline;
+		std::shared_ptr < MeshGaussianFillData> gs_filldata_pipeline;
+		std::shared_ptr < MeshGaussianSort> gs_sort_pipeline;
+		std::shared_ptr <MeshGaussianRaster> draw_mesh_gs_pipeline;
 	};
 	std::map<D3DHelper::Device*, PilelineList> m_device_pipeline_list;
 
 	struct IntermediateBuffer
 	{
-		Microsoft::WRL::ComPtr<ID3D12Resource> counter_buffer;
+		Microsoft::WRL::ComPtr<ID3D12Resource> cluster_counter_buffer;
 		Microsoft::WRL::ComPtr<ID3D12Resource> visible_cluster_buffer;
+		Microsoft::WRL::ComPtr<ID3D12Resource> point_counter_buffer;
+		Microsoft::WRL::ComPtr<ID3D12Resource> visible_point_buffer;
+		Microsoft::WRL::ComPtr<ID3D12Resource> visible_point_depth_buffer;
 		
 	};
 	const int MAX_CLUSTER_NUM = 1024 * 1024;
+	const int MAX_POINTS_NUM = 50 * 1024 * 1024;
 	std::map<D3DHelper::Device*, IntermediateBuffer> m_device_intermediate_buffer_list;
 
 

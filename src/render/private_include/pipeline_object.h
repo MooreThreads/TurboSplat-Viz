@@ -1,6 +1,7 @@
 #pragma once
 #include <wrl.h>
 #include <vector>
+#include <string>
 #include "d3d12.h"
 #include "dxcapi.h"
 #include "device.h"
@@ -40,6 +41,16 @@ public:
 
 class ComputePipeline:public Pipeline
 {
+protected:
+	Microsoft::WRL::ComPtr<ID3DBlob> m_compute_shader;
+	std::wstring m_shader_dir;
+	std::wstring m_shader_name;
+	static void CompileComputeShader(std::wstring shader_dir, std::wstring shader_name, std::wstring entry, Microsoft::WRL::ComPtr<ID3DBlob>* out_shader);
+	static void CompileComputeShader(std::wstring shader_dir, std::wstring shader_name, std::wstring entry,const std::vector<std::wstring>& add_arg, Microsoft::WRL::ComPtr<ID3DBlob>* out_shader);
+	virtual void InitShaders();
+	virtual void InitPSO();
+	virtual void CommitDescriptors(D3DHelper::StaticDescriptorStack(&param_stacks)[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES]);
+
 public:
 	ComputePipeline();
 	virtual void Init(std::shared_ptr<D3DHelper::Device> device);
@@ -47,7 +58,7 @@ public:
 		D3DHelper::StaticDescriptorStack(&param_stacks)[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES],
 		int buffer_index,
 		const ViewInfo* p_view,
-		const RenderProxy* proxy) {};
+		const RenderProxy* proxy);
 	virtual void Dispatch(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list,
 		D3DHelper::StaticDescriptorStack(&param_stacks)[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES],
 		int buffer_index,
