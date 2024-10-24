@@ -1,5 +1,7 @@
 #include"struct_define.hlsli"
 
+#define THREADSNUM 64
+
 cbuffer view_cbuffer : register(b0)
 {
     float4x4 view_transform;
@@ -17,43 +19,46 @@ cbuffer batch_cbuffer : register(b1)
 StructuredBuffer<GaussianPoint> gaussian_points : register(t0);
 StructuredBuffer<GaussianCluster> gaussian_clusters : register(t1);
 Texture2D<float> gaussian_texture : register(t2);
-ByteAddressBuffer visible_clusters_num : register(t3);
-Buffer<int> visible_clusters : register(t4);
+ByteAddressBuffer visible_points_num : register(t3);
+Buffer<uint> depth_order_pointid : register(t4);
 
-[NumThreads(64, 1, 1)]
+
+
+[NumThreads(THREADSNUM, 1, 1)]
 [OutputTopology("triangle")]
 void main(
+    uint tid : SV_DispatchThreadID,
     uint gtid : SV_GroupThreadID,
     uint gid : SV_GroupID,
-    out indices uint3 tris[128],
-    out vertices VertexOut verts[256]
+    out indices uint3 tris[THREADSNUM*2],
+    out vertices VertexOut verts[THREADSNUM*4]
 )
 {
-    GaussianCluster cluster;
-    cluster.points_num = 0;
-    if (gid < visible_clusters_num.Load(0))
+    uint VertexCount = 0;
+    uint TriangleCount = 0;
+    if (gid*THREADSNUM < visible_points_num.Load(0))
     {
-        cluster = gaussian_clusters[visible_clusters[gid]];
+        uint valid_threads_num = min((visible_points_num.Load(0) - gid * THREADSNUM), THREADSNUM);
+        VertexCount = valid_threads_num * 4;
+        TriangleCount = valid_threads_num * 2;
     }
-    uint VertexCount = cluster.points_num * 4;
-    uint TriangleCount = cluster.points_num * 2;
     SetMeshOutputCounts(VertexCount, TriangleCount);
-    if (gtid < cluster.points_num)
+    if (tid < visible_points_num.Load(0))
     {
-        GaussianPoint gaussian_point = gaussian_points[cluster.point_offset + gtid];
+        GaussianPoint gaussian_point = gaussian_points[depth_order_pointid[tid]];
         float4 world_pos = mul(world_transform, float4(gaussian_point.position, 1));
         float4 view_pos = mul(view_transform, world_pos);
         float4 homo_pos = mul(project_transform, view_pos);
         float4 ndc_pos = homo_pos / homo_pos.w;
         
     //proj 3d -> 2d
-        float3x3 world_transform3x3 = world_transform;
-        float3x3 world_cov3d = mul(mul(world_transform3x3, gaussian_point.cov3d), transpose(world_transform3x3)); //apply world transform
+        float3x3 world_view_trans = mul(view_transform, world_transform);
         float3x3 ray_space_transform = float3x3(
         focal.x / view_pos.z, 0, -focal.x * view_pos.x / (view_pos.z * view_pos.z),
         0, focal.y / view_pos.z, -focal.y * view_pos.y / (view_pos.z * view_pos.z),
         0, 0, 0);
-        float2x2 cov2d = mul(mul(ray_space_transform, world_cov3d), transpose(ray_space_transform));
+        float3x3 world_view_ray_trans = mul(ray_space_transform, world_view_trans);
+        float2x2 cov2d = mul(mul(world_view_ray_trans, gaussian_point.cov3d), transpose(world_view_ray_trans));
         
     //eigen(vec2d)
         float det = cov2d[0][0] * cov2d[1][1] - cov2d[0][1] * cov2d[1][0];

@@ -169,7 +169,6 @@ protected:
 	struct BatchBuffer
 	{
 		DirectX::XMMATRIX world_transform;
-		int clusters_num;
 	};
 
 	Microsoft::WRL::ComPtr<ID3D12Resource> gaussian_texture_buffer;
@@ -193,7 +192,7 @@ public:
 
 	MeshGaussianRaster();
 	virtual void Init(std::shared_ptr<D3DHelper::Device> device, Microsoft::WRL::ComPtr<ID3D12Resource> in_counter_buffer,
-		Microsoft::WRL::ComPtr<ID3D12Resource> in_visible_cluster_buffer, const int MAX_CLUSTER_NUM);
+		Microsoft::WRL::ComPtr<ID3D12Resource> in_visible_cluster_buffer, const int MAX_POINTS_NUM);
 	//todo indirect dispatch
 	virtual void Draw(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list,
 		D3DHelper::StaticDescriptorStack(&param_stacks)[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES],

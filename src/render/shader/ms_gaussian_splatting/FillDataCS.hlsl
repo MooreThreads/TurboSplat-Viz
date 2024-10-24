@@ -28,28 +28,29 @@ void main(uint tid : SV_DispatchThreadID)
     if (tid < visible_clusters_num.Load(0))
     {
         cluster=gaussian_clusters[visible_clusters[tid]];
-    }
-    uint offset_in_warp = WavePrefixSum(cluster.points_num);
-    uint warp_points_num = WaveActiveSum(cluster.points_num);
-    uint appendOffset = 0;
-    if (WaveIsFirstLane())
-    {
-        visible_points_num.InterlockedAdd(0, warp_points_num, appendOffset);
-    }
-    appendOffset = WaveReadLaneFirst(appendOffset);
-    appendOffset += offset_in_warp;
+        uint offset_in_warp = WavePrefixSum(cluster.points_num);
+        uint warp_points_num = WaveActiveSum(cluster.points_num);
+        uint appendOffset = 0;
+        if (WaveIsFirstLane())
+        {
+            visible_points_num.InterlockedAdd(0, warp_points_num, appendOffset);
+        }
+        appendOffset = WaveReadLaneFirst(appendOffset);
+        appendOffset += offset_in_warp;
     
-    for (int i = 0; i < cluster.points_num;i++)
-    {
-        GaussianPoint gaussian_point = gaussian_points[cluster.point_offset + i];
-        float4 world_pos = mul(world_transform, float4(gaussian_point.position, 1));
-        float4 view_pos = mul(view_transform, world_pos);
-        float4 homo_pos = mul(project_transform, view_pos);
-        uint depth = clamp(homo_pos.z / homo_pos.w, 0.0f, 1.0f) * uint(0xffffffff);
+        for (int i = 0; i < cluster.points_num; i++)
+        {
+            GaussianPoint gaussian_point = gaussian_points[cluster.point_offset + i];
+            float4 world_pos = mul(world_transform, float4(gaussian_point.position, 1));
+            float4 view_pos = mul(view_transform, world_pos);
+            float4 homo_pos = mul(project_transform, view_pos);
+            uint depth = clamp(homo_pos.z / homo_pos.w, 0.0f, 1.0f) * uint(0xffffffff);
         
-        point_id_buffer[appendOffset + i] = cluster.point_offset + i;
-        depth_buffer[appendOffset + i] = depth;
+            point_id_buffer[appendOffset + i] = cluster.point_offset + i;
+            depth_buffer[appendOffset + i] = depth;
+        }
     }
+
 
 }
 

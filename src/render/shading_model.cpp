@@ -92,7 +92,7 @@ void GaussianSplattingShadingModel::RegisterDevice(std::shared_ptr<D3DHelper::De
 	pipeline_list.gs_sort_pipeline= std::make_shared<MeshGaussianSort>();
 	pipeline_list.gs_sort_pipeline->Init(device);
 	pipeline_list.draw_mesh_gs_pipeline = std::make_shared<MeshGaussianRaster>();
-	pipeline_list.draw_mesh_gs_pipeline->Init(device, buffer.cluster_counter_buffer, buffer.visible_cluster_buffer, MAX_CLUSTER_NUM);
+	pipeline_list.draw_mesh_gs_pipeline->Init(device, buffer.point_counter_buffer, buffer.visible_point_buffer, MAX_POINTS_NUM);
 	m_device_pipeline_list[device.get()] = pipeline_list;
 
 

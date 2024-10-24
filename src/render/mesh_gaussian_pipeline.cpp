@@ -333,6 +333,7 @@ void MeshGaussianSort::InitShaders()
 		L"-DKEY_UINT",
 		L"-DSORT_PAIRS",
 		L"-DPAYLOAD_UINT",
+		L"-DSHOULD_ASCEND"
 	};
 	CompileComputeShader(L"./shader/GPUSorting/", L"OneSweep", L"InitSweep", define, &m_init_sweep_cs);
 	CompileComputeShader(L"./shader/GPUSorting/", L"OneSweep", L"GlobalHistogram", define, &m_global_hist_cs);
@@ -596,7 +597,7 @@ MeshGaussianRaster::MeshGaussianRaster() :DefaultGraphicPipeline(), pipeline_dat
 }
 
 void MeshGaussianRaster::Init(std::shared_ptr<D3DHelper::Device> device, Microsoft::WRL::ComPtr<ID3D12Resource> in_counter_buffer,
-	Microsoft::WRL::ComPtr<ID3D12Resource> in_visible_cluster_buffer,const int MAX_CLUSTER_NUM)
+	Microsoft::WRL::ComPtr<ID3D12Resource> in_visible_points_buffer,const int MAX_POINTS_NUM)
 {
 	DefaultGraphicPipeline::Init(device);
 
@@ -633,14 +634,14 @@ void MeshGaussianRaster::Init(std::shared_ptr<D3DHelper::Device> device, Microso
 
 	//init srv: visible_cluster
 	D3D12_SHADER_RESOURCE_VIEW_DESC visible_cluster_srv_desc;
-	visible_cluster_srv_desc.Format = DXGI_FORMAT_R32_SINT;
+	visible_cluster_srv_desc.Format = DXGI_FORMAT_R32_UINT;
 	visible_cluster_srv_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
 	visible_cluster_srv_desc.Buffer.FirstElement = 0;
 	visible_cluster_srv_desc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
-	visible_cluster_srv_desc.Buffer.NumElements = MAX_CLUSTER_NUM;
+	visible_cluster_srv_desc.Buffer.NumElements = MAX_POINTS_NUM;
 	visible_cluster_srv_desc.Buffer.StructureByteStride = 0;
 	visible_cluster_srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-	m_device->GetDevice()->CreateShaderResourceView(in_visible_cluster_buffer.Get(), &visible_cluster_srv_desc,
+	m_device->GetDevice()->CreateShaderResourceView(in_visible_points_buffer.Get(), &visible_cluster_srv_desc,
 		m_heaps[D3D12_DESCRIPTOR_HEAP_TYPE::D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV][2]);
 
 	
@@ -846,7 +847,7 @@ void MeshGaussianRaster::InitRootSignature()
 	rootParameters[0].InitAsConstants(sizeof(ViewBuffer) / 4, 0, 0, D3D12_SHADER_VISIBILITY_ALL);
 	rootParameters[1].InitAsConstants(sizeof(BatchBuffer) / 4, 1, 0, D3D12_SHADER_VISIBILITY_ALL);
 	CD3DX12_DESCRIPTOR_RANGE DescRange[1];
-	DescRange[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 5, 0);//points srv + clusters srv + texture srv + counter + visible_buffer
+	DescRange[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 5, 0);//points srv + clusters srv + texture srv + point counter + depth order points
 	rootParameters[2].InitAsDescriptorTable(_countof(DescRange), DescRange, D3D12_SHADER_VISIBILITY_ALL);
 
 	CD3DX12_ROOT_SIGNATURE_DESC rootSignatureDesc;
@@ -869,7 +870,6 @@ void MeshGaussianRaster::SetRootSignature(Microsoft::WRL::ComPtr<ID3D12GraphicsC
 	view_buffer.focal = p_view->focal;
 	BatchBuffer batch_buffer;
 	batch_buffer.world_transform = proxy->world_transform;
-	batch_buffer.clusters_num = proxy->GetClusterCountPerInstance();
 
 	command_list->SetGraphicsRoot32BitConstants(0, sizeof(ViewBuffer) / 4, &view_buffer, 0);
 	command_list->SetGraphicsRoot32BitConstants(1, sizeof(BatchBuffer) / 4, &batch_buffer, 0);
@@ -911,5 +911,5 @@ void MeshGaussianRaster::Draw(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> 
 	Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList6> command_list6;
 	command_list.As(&command_list6);
 	assert(command_list6);
-	command_list6->DispatchMesh(proxy->GetClusterCountPerInstance(), 1, 1);
+	command_list6->DispatchMesh(proxy->GetVertexCountPerInstance()/64, 1, 1);//todo indirect dispatch
 }
