@@ -85,6 +85,7 @@ private:
 		Microsoft::WRL::ComPtr<ID3D12Resource> point_counter_buffer;
 		Microsoft::WRL::ComPtr<ID3D12Resource> visible_point_buffer;
 		Microsoft::WRL::ComPtr<ID3D12Resource> visible_point_depth_buffer;
+		Microsoft::WRL::ComPtr<ID3D12Resource> indirect_arg_filldata_buffer;
 		
 	};
 	const int MAX_CLUSTER_NUM = 1024 * 1024;

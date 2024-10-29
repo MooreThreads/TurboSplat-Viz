@@ -1,5 +1,11 @@
 #include"struct_define.hlsli"
 
+#ifndef THREADSNUM
+    #define THREADSNUM 256
+#endif
+
+
+
 cbuffer view_cbuffer : register(b0)
 {
     float4x4 view_transform;
@@ -19,8 +25,9 @@ Buffer<int> visible_clusters : register(t3);
 RWBuffer<int> depth_buffer : register(u0);
 RWBuffer<int> point_id_buffer : register(u1);
 RWByteAddressBuffer visible_points_num : register(u2);
+//RWByteAddressBuffer indirect_arg : register(u3);
 
-[NumThreads(256, 1, 1)]
+[NumThreads(THREADSNUM, 1, 1)]
 void main(uint tid : SV_DispatchThreadID)
 {
     GaussianCluster cluster;
@@ -34,10 +41,11 @@ void main(uint tid : SV_DispatchThreadID)
         if (WaveIsFirstLane())
         {
             visible_points_num.InterlockedAdd(0, warp_points_num, appendOffset);
+            //indirect_arg.InterlockedMax(0, ceil((appendOffset + warp_points_num) / 64.0f)); //64 threads per block in mesh shader
         }
         appendOffset = WaveReadLaneFirst(appendOffset);
         appendOffset += offset_in_warp;
-    
+        
         for (int i = 0; i < cluster.points_num; i++)
         {
             GaussianPoint gaussian_point = gaussian_points[cluster.point_offset + i];

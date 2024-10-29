@@ -48,10 +48,19 @@ protected:
 	static void CompileComputeShader(std::wstring shader_dir, std::wstring shader_name, std::wstring entry, Microsoft::WRL::ComPtr<ID3DBlob>* out_shader);
 	static void CompileComputeShader(std::wstring shader_dir, std::wstring shader_name, std::wstring entry,const std::vector<std::wstring>& add_arg, Microsoft::WRL::ComPtr<ID3DBlob>* out_shader);
 	virtual void InitShaders();
+	virtual void InitIndirect();
 	virtual void InitPSO();
 	virtual void CommitDescriptors(D3DHelper::StaticDescriptorStack(&param_stacks)[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES]);
 
+	//indirect
+	Microsoft::WRL::ComPtr<ID3D12CommandSignature> m_command_signature;
+
 public:
+	struct IndirectCommand
+	{
+		D3D12_DISPATCH_ARGUMENTS dispatch_args;
+	};
+
 	ComputePipeline();
 	virtual void Init(std::shared_ptr<D3DHelper::Device> device);
 	virtual void Draw(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list,
@@ -64,6 +73,12 @@ public:
 		int buffer_index,
 		const ViewInfo* p_view,
 		const RenderProxy* proxy)=0;
+	virtual void DispatchIndirect(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list,
+		Microsoft::WRL::ComPtr<ID3D12Resource> indirect_args,
+		D3DHelper::StaticDescriptorStack(&param_stacks)[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES],
+		int buffer_index,
+		const ViewInfo* p_view,
+		const RenderProxy* proxy) {};
 };
 
 class DefaultGraphicPipeline: public Pipeline

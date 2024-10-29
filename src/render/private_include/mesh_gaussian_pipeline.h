@@ -14,7 +14,8 @@ public:
 	MeshGaussianClear();
 	virtual void Init(std::shared_ptr<D3DHelper::Device> device,
 		Microsoft::WRL::ComPtr<ID3D12Resource> out_visible_cluster_counter_buffer,
-		Microsoft::WRL::ComPtr<ID3D12Resource> out_visible_point_counter_buffer);
+		Microsoft::WRL::ComPtr<ID3D12Resource> out_visible_point_counter_buffer,
+		Microsoft::WRL::ComPtr<ID3D12Resource> out_filldata_arg_buffer);
 	virtual void Dispatch(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list,
 		D3DHelper::StaticDescriptorStack(&param_stacks)[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES],
 		int buffer_index,
@@ -42,7 +43,8 @@ protected:
 public:
 	MeshGaussianClusterCulling();
 	virtual void Init(std::shared_ptr<D3DHelper::Device> device, Microsoft::WRL::ComPtr<ID3D12Resource> out_counter_buffer,
-		Microsoft::WRL::ComPtr<ID3D12Resource> out_visible_cluster_buffer, const int MAX_CLUSTER_NUM);
+		Microsoft::WRL::ComPtr<ID3D12Resource> out_visible_cluster_buffer, Microsoft::WRL::ComPtr<ID3D12Resource> out_indirect_arg,
+		const int MAX_CLUSTER_NUM);
 	virtual void Dispatch(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list,
 		D3DHelper::StaticDescriptorStack(&param_stacks)[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES],
 		int buffer_index,
@@ -80,6 +82,12 @@ public:
 		Microsoft::WRL::ComPtr<ID3D12Resource> out_visible_point_counter_buffer,
 		const int MAX_CLUSTER_NUM,const int MAX_POINTS_NUM);
 	virtual void Dispatch(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list,
+		D3DHelper::StaticDescriptorStack(&param_stacks)[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES],
+		int buffer_index,
+		const ViewInfo* p_view,
+		const RenderProxy* proxy);
+	virtual void DispatchIndirect(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list,
+		Microsoft::WRL::ComPtr<ID3D12Resource> indirect_args,
 		D3DHelper::StaticDescriptorStack(&param_stacks)[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES],
 		int buffer_index,
 		const ViewInfo* p_view,

@@ -73,19 +73,22 @@ void GaussianSplattingShadingModel::RegisterDevice(std::shared_ptr<D3DHelper::De
 		&CD3DX12_RESOURCE_DESC::Buffer(sizeof(int) * MAX_POINTS_NUM, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS), D3D12_RESOURCE_STATE_COMMON, nullptr, IID_PPV_ARGS(&buffer.visible_point_buffer)));
 	ThrowIfFailed(device->GetDevice()->CreateCommittedResource(&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT), D3D12_HEAP_FLAG_NONE,
 		&CD3DX12_RESOURCE_DESC::Buffer(sizeof(int) * MAX_POINTS_NUM, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS), D3D12_RESOURCE_STATE_COMMON, nullptr, IID_PPV_ARGS(&buffer.visible_point_depth_buffer)));
+	ThrowIfFailed(device->GetDevice()->CreateCommittedResource(&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT), D3D12_HEAP_FLAG_NONE,
+		&CD3DX12_RESOURCE_DESC::Buffer(sizeof(MeshGaussianFillData::IndirectCommand), D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS), D3D12_RESOURCE_STATE_COMMON, nullptr, IID_PPV_ARGS(&buffer.indirect_arg_filldata_buffer)));
 	buffer.cluster_counter_buffer->SetName(L"visible cluster counter");
 	buffer.visible_cluster_buffer->SetName(L"visible cluster id");
 	buffer.point_counter_buffer->SetName(L"visible point counter");
 	buffer.visible_point_buffer->SetName(L"visible point id");
 	buffer.visible_point_depth_buffer->SetName(L"visible point uint depth");
+	buffer.indirect_arg_filldata_buffer->SetName(L"FillDataCS indirect args");
 	m_device_intermediate_buffer_list[device.get()] = buffer;
 
 
 	PilelineList pipeline_list = {};
 	pipeline_list.gs_clear_pipeline= std::make_shared<MeshGaussianClear>();
-	pipeline_list.gs_clear_pipeline->Init(device, buffer.cluster_counter_buffer, buffer.point_counter_buffer);
+	pipeline_list.gs_clear_pipeline->Init(device, buffer.cluster_counter_buffer, buffer.point_counter_buffer, buffer.indirect_arg_filldata_buffer);
 	pipeline_list.gs_cluster_culling_pipeline = std::make_shared<MeshGaussianClusterCulling>();
-	pipeline_list.gs_cluster_culling_pipeline->Init(device, buffer.cluster_counter_buffer, buffer.visible_cluster_buffer, MAX_CLUSTER_NUM);
+	pipeline_list.gs_cluster_culling_pipeline->Init(device, buffer.cluster_counter_buffer, buffer.visible_cluster_buffer, buffer.indirect_arg_filldata_buffer, MAX_CLUSTER_NUM);
 	pipeline_list.gs_filldata_pipeline = std::make_shared<MeshGaussianFillData>();
 	pipeline_list.gs_filldata_pipeline->Init(device, buffer.cluster_counter_buffer, buffer.visible_cluster_buffer, buffer.visible_point_buffer,
 		buffer.visible_point_depth_buffer, buffer.point_counter_buffer, MAX_CLUSTER_NUM, MAX_POINTS_NUM);
@@ -109,7 +112,8 @@ void GaussianSplattingShadingModel::PopulateCommandList(Microsoft::WRL::ComPtr<I
 	{
 		D3D12_RESOURCE_BARRIER uav_barriers[] = {
 				CD3DX12_RESOURCE_BARRIER::UAV(buffer.point_counter_buffer.Get()),
-				CD3DX12_RESOURCE_BARRIER::UAV(buffer.cluster_counter_buffer.Get())
+				CD3DX12_RESOURCE_BARRIER::UAV(buffer.cluster_counter_buffer.Get()),
+				CD3DX12_RESOURCE_BARRIER::UAV(buffer.indirect_arg_filldata_buffer.Get())
 		};
 		command_list->ResourceBarrier(_countof(uav_barriers), uav_barriers);
 	}
@@ -117,11 +121,14 @@ void GaussianSplattingShadingModel::PopulateCommandList(Microsoft::WRL::ComPtr<I
 	{
 		D3D12_RESOURCE_BARRIER uav_barriers[] = {
 			CD3DX12_RESOURCE_BARRIER::Transition(buffer.cluster_counter_buffer.Get(),D3D12_RESOURCE_STATE_COMMON,D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE),
-			CD3DX12_RESOURCE_BARRIER::Transition(buffer.visible_cluster_buffer.Get(),D3D12_RESOURCE_STATE_COMMON,D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE)
+			CD3DX12_RESOURCE_BARRIER::Transition(buffer.visible_cluster_buffer.Get(),D3D12_RESOURCE_STATE_COMMON,D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE),
+			CD3DX12_RESOURCE_BARRIER::Transition(buffer.indirect_arg_filldata_buffer.Get(),D3D12_RESOURCE_STATE_COMMON,D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT)
 		};
 		command_list->ResourceBarrier(_countof(uav_barriers), uav_barriers);
 	}
-	pipeline_list.gs_filldata_pipeline->Dispatch(command_list, binded_heaps, buffer_index, p_view, p_render_proxy);
+	//pipeline_list.gs_filldata_pipeline->Dispatch(command_list, binded_heaps, buffer_index, p_view, p_render_proxy);
+	pipeline_list.gs_filldata_pipeline->DispatchIndirect(command_list, buffer.indirect_arg_filldata_buffer,
+		binded_heaps, buffer_index, p_view, p_render_proxy);
 	{
 		D3D12_RESOURCE_BARRIER uav_barriers[] = {
 			CD3DX12_RESOURCE_BARRIER::Transition(buffer.point_counter_buffer.Get(),D3D12_RESOURCE_STATE_COMMON,D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE),

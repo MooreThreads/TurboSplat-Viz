@@ -166,6 +166,19 @@ void ComputePipeline::InitPSO()
 	streamDesc.SizeInBytes = sizeof(psoStream);
 	ThrowIfFailed(m_device->GetDevice()->CreatePipelineState(&streamDesc, IID_PPV_ARGS(&m_pipeline_state)));
 }
+void ComputePipeline::InitIndirect()
+{
+	
+	D3D12_INDIRECT_ARGUMENT_DESC argumentDescs[1] = {};
+	argumentDescs[0].Type = D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH;
+
+	D3D12_COMMAND_SIGNATURE_DESC commandSignatureDesc = {};
+	commandSignatureDesc.pArgumentDescs = argumentDescs;
+	commandSignatureDesc.NumArgumentDescs = _countof(argumentDescs);
+	commandSignatureDesc.ByteStride = sizeof(IndirectCommand);
+
+	ThrowIfFailed(m_device->GetDevice()->CreateCommandSignature(&commandSignatureDesc, nullptr, IID_PPV_ARGS(&m_command_signature)));
+}
 void ComputePipeline::CommitDescriptors(D3DHelper::StaticDescriptorStack(&param_stacks)[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES])
 {
 	param_stacks[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV].push_back(m_heaps[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV],

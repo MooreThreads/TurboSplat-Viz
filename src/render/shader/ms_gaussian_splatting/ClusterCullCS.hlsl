@@ -1,5 +1,9 @@
 #include"struct_define.hlsli"
 
+#ifndef THREADSNUM
+    #define THREADSNUM 256
+#endif
+
 
 cbuffer view_cbuffer : register(b0)
 {
@@ -16,7 +20,7 @@ StructuredBuffer<GaussianCluster> gaussian_clusters : register(t1);
 
 RWByteAddressBuffer visible_clusters_num : register(u0);
 RWBuffer<int> visible_clusters : register(u1);
-
+RWByteAddressBuffer indirect_arg : register(u2);
 
 bool inside_plane(float4 plane,float3 aabb_origin,float3 aabb_extend)
 {
@@ -26,7 +30,7 @@ bool inside_plane(float4 plane,float3 aabb_origin,float3 aabb_extend)
     return push_out_dist>0;
 }
 
-[NumThreads(256, 1, 1)]
+[NumThreads(THREADSNUM, 1, 1)]
 void main(
     uint tid : SV_DispatchThreadID,
     uint gid : SV_GroupID)
@@ -53,6 +57,8 @@ void main(
         // this way, we only issue one atomic for the entire wave, which reduces contention
         // and keeps the output data for each lane in this wave together in the output buffer
         visible_clusters_num.InterlockedAdd(0, appendCount, appendOffset);
+        indirect_arg.InterlockedMax(0, ceil((appendOffset + appendCount) / (float) THREADSNUM));
+
     }
     appendOffset = WaveReadLaneFirst(appendOffset); // broadcast value
     appendOffset += laneAppendOffset; // and add in the offset for this lane

@@ -23,7 +23,7 @@ void MeshGaussianClear::InitRootSignature()
 {
 	CD3DX12_ROOT_PARAMETER rootParameters[1];
 	CD3DX12_DESCRIPTOR_RANGE DescRange[1];
-	DescRange[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 2, 0);//gaussian_clusters pints
+	DescRange[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 3, 0);
 	rootParameters[0].InitAsDescriptorTable(_countof(DescRange), DescRange, D3D12_SHADER_VISIBILITY_ALL);
 
 	CD3DX12_ROOT_SIGNATURE_DESC rootSignatureDesc;
@@ -35,29 +35,45 @@ void MeshGaussianClear::InitRootSignature()
 }
 void MeshGaussianClear::Init(std::shared_ptr<D3DHelper::Device> device,
 	Microsoft::WRL::ComPtr<ID3D12Resource> out_visible_cluster_counter_buffer,
-	Microsoft::WRL::ComPtr<ID3D12Resource> out_visible_point_counter_buffer)
+	Microsoft::WRL::ComPtr<ID3D12Resource> out_visible_point_counter_buffer,
+	Microsoft::WRL::ComPtr<ID3D12Resource> out_filldata_arg_buffer)
 {
 	ComputePipeline::Init(device);
 
 
 	D3D12_DESCRIPTOR_HEAP_DESC heap_desc{};
-	heap_desc.NumDescriptors = 2;
+	heap_desc.NumDescriptors = 3;
 	heap_desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 	heap_desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 	m_heaps[D3D12_DESCRIPTOR_HEAP_TYPE::D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV].Init(heap_desc, m_device);
 
-	D3D12_UNORDERED_ACCESS_VIEW_DESC counter_uav_desc = {};
-	counter_uav_desc.Format = DXGI_FORMAT_R32_TYPELESS;
-	counter_uav_desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
-	counter_uav_desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_RAW;
-	counter_uav_desc.Buffer.CounterOffsetInBytes = 0;
-	counter_uav_desc.Buffer.FirstElement = 0;
-	counter_uav_desc.Buffer.NumElements = 1;
-	counter_uav_desc.Buffer.StructureByteStride = 0;
-	m_device->GetDevice()->CreateUnorderedAccessView(out_visible_cluster_counter_buffer.Get(), nullptr, &counter_uav_desc,
-		m_heaps[D3D12_DESCRIPTOR_HEAP_TYPE::D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV][0]);
-	m_device->GetDevice()->CreateUnorderedAccessView(out_visible_point_counter_buffer.Get(), nullptr, &counter_uav_desc,
-		m_heaps[D3D12_DESCRIPTOR_HEAP_TYPE::D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV][1]);
+	{
+		D3D12_UNORDERED_ACCESS_VIEW_DESC counter_uav_desc = {};
+		counter_uav_desc.Format = DXGI_FORMAT_R32_TYPELESS;
+		counter_uav_desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
+		counter_uav_desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_RAW;
+		counter_uav_desc.Buffer.CounterOffsetInBytes = 0;
+		counter_uav_desc.Buffer.FirstElement = 0;
+		counter_uav_desc.Buffer.NumElements = 1;
+		counter_uav_desc.Buffer.StructureByteStride = 0;
+		m_device->GetDevice()->CreateUnorderedAccessView(out_visible_cluster_counter_buffer.Get(), nullptr, &counter_uav_desc,
+			m_heaps[D3D12_DESCRIPTOR_HEAP_TYPE::D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV][0]);
+		m_device->GetDevice()->CreateUnorderedAccessView(out_visible_point_counter_buffer.Get(), nullptr, &counter_uav_desc,
+			m_heaps[D3D12_DESCRIPTOR_HEAP_TYPE::D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV][1]);
+	}
+
+	{
+		D3D12_UNORDERED_ACCESS_VIEW_DESC indirect_arg_uav_desc = {};
+		indirect_arg_uav_desc.Format = DXGI_FORMAT_UNKNOWN;
+		indirect_arg_uav_desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
+		indirect_arg_uav_desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
+		indirect_arg_uav_desc.Buffer.CounterOffsetInBytes = 0;
+		indirect_arg_uav_desc.Buffer.FirstElement = 0;
+		indirect_arg_uav_desc.Buffer.NumElements = 1;
+		indirect_arg_uav_desc.Buffer.StructureByteStride = sizeof(D3D12_DISPATCH_ARGUMENTS);
+		m_device->GetDevice()->CreateUnorderedAccessView(out_filldata_arg_buffer.Get(), nullptr, &indirect_arg_uav_desc,
+			m_heaps[D3D12_DESCRIPTOR_HEAP_TYPE::D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV][2]);
+	}
 
 }
 
@@ -87,14 +103,15 @@ MeshGaussianClusterCulling::MeshGaussianClusterCulling() :ComputePipeline()
 }
 
 void MeshGaussianClusterCulling::Init(std::shared_ptr<D3DHelper::Device> device, Microsoft::WRL::ComPtr<ID3D12Resource> out_counter_buffer,
-	Microsoft::WRL::ComPtr<ID3D12Resource> out_visible_cluster_buffer, const int MAX_CLUSTER_NUM)
+	Microsoft::WRL::ComPtr<ID3D12Resource> out_visible_cluster_buffer, Microsoft::WRL::ComPtr<ID3D12Resource> out_indirect_arg,
+	const int MAX_CLUSTER_NUM)
 {
 	ComputePipeline::Init(device);
 
 	this->MAX_CLUSTER_NUM = MAX_CLUSTER_NUM;
 
 	D3D12_DESCRIPTOR_HEAP_DESC heap_desc{};
-	heap_desc.NumDescriptors = 2;
+	heap_desc.NumDescriptors = 3;
 	heap_desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 	heap_desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 	m_heaps[D3D12_DESCRIPTOR_HEAP_TYPE::D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV].Init(heap_desc, m_device);
@@ -120,6 +137,17 @@ void MeshGaussianClusterCulling::Init(std::shared_ptr<D3DHelper::Device> device,
 	visible_cluster_uav_desc.Buffer.StructureByteStride = 0;
 	m_device->GetDevice()->CreateUnorderedAccessView(out_visible_cluster_buffer.Get(), nullptr, &visible_cluster_uav_desc,
 		m_heaps[D3D12_DESCRIPTOR_HEAP_TYPE::D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV][1]);
+
+	D3D12_UNORDERED_ACCESS_VIEW_DESC indirect_arg_uav_desc = {};
+	indirect_arg_uav_desc.Format = DXGI_FORMAT_R32_TYPELESS;
+	indirect_arg_uav_desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
+	indirect_arg_uav_desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_RAW;
+	indirect_arg_uav_desc.Buffer.CounterOffsetInBytes = 0;
+	indirect_arg_uav_desc.Buffer.FirstElement = 0;
+	indirect_arg_uav_desc.Buffer.NumElements = 3;
+	indirect_arg_uav_desc.Buffer.StructureByteStride = 0;
+	m_device->GetDevice()->CreateUnorderedAccessView(out_indirect_arg.Get(), nullptr, &indirect_arg_uav_desc,
+		m_heaps[D3D12_DESCRIPTOR_HEAP_TYPE::D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV][2]);
 }
 
 void MeshGaussianClusterCulling::InitResources()
@@ -137,7 +165,7 @@ void MeshGaussianClusterCulling::InitRootSignature()
 	rootParameters[1].InitAsConstants(sizeof(int) / 4, 1, 0, D3D12_SHADER_VISIBILITY_ALL);
 	CD3DX12_DESCRIPTOR_RANGE DescRange[2];
 	DescRange[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 2, 0);//gaussian_clusters pints
-	DescRange[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 2, 0);//visible_clusters visible_clusters_num
+	DescRange[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 3, 0);
 	rootParameters[2].InitAsDescriptorTable(_countof(DescRange), DescRange, D3D12_SHADER_VISIBILITY_ALL);
 
 	CD3DX12_ROOT_SIGNATURE_DESC rootSignatureDesc;
@@ -203,6 +231,7 @@ void MeshGaussianFillData::Init(std::shared_ptr<D3DHelper::Device> device,
 	const int MAX_CLUSTER_NUM, const int MAX_POINTS_NUM)
 {
 	ComputePipeline::Init(device);
+	InitIndirect();
 	this->MAX_CLUSTER_NUM = MAX_CLUSTER_NUM;
 	this->MAX_POINTS_NUM = MAX_POINTS_NUM;
 
@@ -325,6 +354,25 @@ void MeshGaussianFillData::Dispatch(Microsoft::WRL::ComPtr<ID3D12GraphicsCommand
 	command_list->Dispatch(std::ceil(proxy->GetClusterCountPerInstance() / 256.0f), 1, 1);
 }
 
+void MeshGaussianFillData::DispatchIndirect(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list,
+	Microsoft::WRL::ComPtr<ID3D12Resource> indirect_args,
+	D3DHelper::StaticDescriptorStack(&param_stacks)[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES],
+	int buffer_index,
+	const ViewInfo* p_view,
+	const RenderProxy* proxy)
+{
+	auto gaussian_render_proxy = dynamic_cast<const GaussianRenderProxy*>(proxy);
+	assert(gaussian_render_proxy);
+	assert(MAX_CLUSTER_NUM > proxy->GetClusterCountPerInstance());
+
+
+	D3D12_GPU_DESCRIPTOR_HANDLE stack_bottom[2]{ param_stacks[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV].GetTopGPU(), D3D12_GPU_DESCRIPTOR_HANDLE() };
+	SetRootSignature(command_list, p_view, proxy, stack_bottom);
+	gaussian_render_proxy->CommitParams(command_list, param_stacks);
+	CommitDescriptors(param_stacks);
+	command_list->SetPipelineState(m_pipeline_state.Get());
+	command_list->ExecuteIndirect(m_command_signature.Get(), 1, indirect_args.Get(), 0, nullptr, 0);
+}
 
 
 void MeshGaussianSort::InitShaders()
@@ -498,20 +546,12 @@ void MeshGaussianSort::Dispatch(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList
 		command_list->SetPipelineState(m_global_hist_pso.Get());
 
 		uint32_t threadBlocks = globalHistPartitions;
-		uint32_t fullBlocks = partitions / k_maxDim;
-		if (fullBlocks)
-		{
-			std::vector<uint32_t> t = { ele_num,0,threadBlocks,k_isNotPartialBitFlag };
-			command_list->SetComputeRoot32BitConstants(0, (uint32_t)t.size(), t.data(), 0);
-			command_list->Dispatch(k_maxDim, fullBlocks, 1);
-		}
-		uint32_t partialBlocks = threadBlocks - fullBlocks * k_maxDim;
-		if (partialBlocks)
-		{
-			std::vector<uint32_t> t = { ele_num,0,threadBlocks,fullBlocks << 1 | k_isPartialBitFlag };
-			command_list->SetComputeRoot32BitConstants(0, (uint32_t)t.size(), t.data(), 0);
-			command_list->Dispatch(partialBlocks, 1, 1);
-		}
+		assert(threadBlocks < k_maxDim);
+
+		std::vector<uint32_t> t = { ele_num,0,threadBlocks, k_isPartialBitFlag };
+		command_list->SetComputeRoot32BitConstants(0, (uint32_t)t.size(), t.data(), 0);
+		command_list->Dispatch(threadBlocks, 1, 1);
+		
 		D3D12_RESOURCE_BARRIER uav_barriers[] = {
 			CD3DX12_RESOURCE_BARRIER::UAV(m_globalhist_buffer.Get())
 		};
@@ -539,8 +579,7 @@ void MeshGaussianSort::Dispatch(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList
 
 		command_list->SetPipelineState(m_digit_binning_pass_pso.Get());
 		uint32_t threadBlocks = partitions;
-		const uint32_t fullBlocks = threadBlocks / k_maxDim;
-		const uint32_t partialBlocks = threadBlocks - fullBlocks * k_maxDim;
+		assert(threadBlocks < k_maxDim);
 		Microsoft::WRL::ComPtr<ID3D12Resource> alt_buffer = m_alt_buffer;
 		Microsoft::WRL::ComPtr<ID3D12Resource> alt_payload_buffer = m_alt_payload_buffer;
 
@@ -551,22 +590,11 @@ void MeshGaussianSort::Dispatch(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList
 			command_list->SetComputeRootUnorderedAccessView(1 + (UINT)Reg::SortPayload, in_out_payload_buffer->GetGPUVirtualAddress());
 			command_list->SetComputeRootUnorderedAccessView(1 + (UINT)Reg::AltPayload, alt_payload_buffer->GetGPUVirtualAddress());
 
-			if (fullBlocks)
-			{
-				std::vector<uint32_t> t = { ele_num, radixShift, threadBlocks, 0 };
-				command_list->SetComputeRoot32BitConstants(0, (uint32_t)t.size(), t.data(), 0);
-				command_list->Dispatch(k_maxDim, fullBlocks, 1);
-				auto pass_hist_uav_barrier = CD3DX12_RESOURCE_BARRIER::UAV(m_passhist_buffer.Get());
-				//To be absolutely safe, add a barrier here on the pass histogram
-				//As threadblocks in the second dispatch are dependent on the first dispatch
-				command_list->ResourceBarrier(1, &pass_hist_uav_barrier);
-			}
-			if (partialBlocks)
-			{
-				std::vector<uint32_t> t = { ele_num, radixShift, threadBlocks, 0 };
-				command_list->SetComputeRoot32BitConstants(0, (uint32_t)t.size(), t.data(), 0);
-				command_list->Dispatch(partialBlocks, 1, 1);
-			}
+
+			std::vector<uint32_t> t = { ele_num, radixShift, threadBlocks, 0 };
+			command_list->SetComputeRoot32BitConstants(0, (uint32_t)t.size(), t.data(), 0);
+			command_list->Dispatch(threadBlocks, 1, 1);
+			
 
 			D3D12_RESOURCE_BARRIER uav_barriers[] = {
 				CD3DX12_RESOURCE_BARRIER::UAV(in_out_sort_buffer.Get()),

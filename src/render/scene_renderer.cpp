@@ -212,6 +212,7 @@ void SceneRenderer::InitD3dResource()
     CreateSwapChain();
     ThrowIfFailed(m_device->GetFactory()->MakeWindowAssociation(m_viewport_info.hwnd, DXGI_MWA_NO_ALT_ENTER));// not support fullscreen transitions.
     ThrowIfFailed(m_device->GetDevice()->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_fence)));
+    m_fence->SetName(L"render fence");
     for (int i = 0; i < FRAME_BUFFER_COUNT; i++)
     {
         m_fence_event[i] = CreateEvent(nullptr, FALSE, FALSE, nullptr);
