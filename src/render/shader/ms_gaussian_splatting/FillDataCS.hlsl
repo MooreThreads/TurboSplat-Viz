@@ -6,7 +6,7 @@
 #ifndef NEXT_STEP_BLOCKSIZE
     #define NEXT_STEP_BLOCKSIZE (512*15)
 #endif
-
+#define STATIC_CLUSTER_SIZE 64
 
 cbuffer view_cbuffer : register(b0)
 {
@@ -36,6 +36,17 @@ void main(uint tid : SV_DispatchThreadID)
     cluster.points_num = 0;
     if (tid < visible_clusters_num.Load(0))
     {
+        #ifdef STATIC_CLUSTER_SIZE
+        cluster = gaussian_clusters[visible_clusters[tid]];
+        uint appendOffset = tid * STATIC_CLUSTER_SIZE;
+        if(tid==0)
+        {
+            uint points_num = visible_clusters_num.Load(0) * STATIC_CLUSTER_SIZE;
+            uint block_num = ceil(points_num / (float) NEXT_STEP_BLOCKSIZE);
+            visible_points_num.Store(0, points_num);
+            indirect_arg.Store(0, block_num);
+        }
+        #else
         cluster=gaussian_clusters[visible_clusters[tid]];
         uint offset_in_warp = WavePrefixSum(cluster.points_num);
         uint warp_points_num = WaveActiveSum(cluster.points_num);
@@ -47,6 +58,7 @@ void main(uint tid : SV_DispatchThreadID)
         }
         appendOffset = WaveReadLaneFirst(appendOffset);
         appendOffset += offset_in_warp;
+        #endif
         
         #ifdef STATIC_CLUSTER_SIZE
         for (int i = 0; i < STATIC_CLUSTER_SIZE; i++)

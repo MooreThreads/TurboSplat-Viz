@@ -198,7 +198,8 @@ void GaussianPoints::load(std::string path)
 	if(cache_miss)
 	{
 		GSLoader loader;
-		loader.Load(path);
+		static_cluster_size = 64;
+		loader.Load(path,static_cluster_size);
 		m_vertex_position = loader.position;
 		m_vertex_color = loader.color;
 		m_cov3d = loader.cov3d;
@@ -220,6 +221,12 @@ void GaussianPoints::Serialization(std::vector<uint8_t>& output)
 	int points_num = m_vertex_position.size();
 	assert(m_vertex_color.size() == points_num);
 	assert(m_cov3d.size() == points_num);
+
+	output.push_back(reinterpret_cast<uint8_t*>(&static_cluster_size)[0]);
+	output.push_back(reinterpret_cast<uint8_t*>(&static_cluster_size)[1]);
+	output.push_back(reinterpret_cast<uint8_t*>(&static_cluster_size)[2]);
+	output.push_back(reinterpret_cast<uint8_t*>(&static_cluster_size)[3]);
+
 
 	output.push_back(reinterpret_cast<uint8_t*>(&points_num)[0]);
 	output.push_back(reinterpret_cast<uint8_t*>(&points_num)[1]);
@@ -303,6 +310,8 @@ void GaussianPoints::Deserialization(const std::vector<uint8_t>& data)
 	m_cluster_extension.clear();
 
 	const uint8_t* data_ptr = data.data();
+	static_cluster_size = reinterpret_cast<const int*>(data_ptr)[0];
+	data_ptr += 4;
 	int points_num = reinterpret_cast<const int*>(data_ptr)[0];
 	data_ptr += 4;
 
@@ -365,7 +374,7 @@ void GaussianPoints::Deserialization(const std::vector<uint8_t>& data)
 }
 
 
-GaussianPoints::GaussianPoints(std::shared_ptr<World> world , std::string asset ) :StaticMesh(world)
+GaussianPoints::GaussianPoints(std::shared_ptr<World> world , std::string asset ) :StaticMesh(world), static_cluster_size(0)
 {
 	m_shading_model_name = typeid(GaussianSplattingShadingModel).name();
 	if (asset.size() == 0)
@@ -379,7 +388,7 @@ GaussianPoints::GaussianPoints(std::shared_ptr<World> world , std::string asset 
 	}
 }
 GaussianPoints::GaussianPoints(std::shared_ptr<World> world, DirectX::XMFLOAT3 position, DirectX::XMFLOAT3 scale, DirectX::XMFLOAT3 rotation, std::string asset):
-	StaticMesh(world, position, scale, rotation)
+	StaticMesh(world, position, scale, rotation), static_cluster_size(0)
 {
 	m_shading_model_name = typeid(GaussianSplattingShadingModel).name();
 	if (asset.size() == 0)

@@ -74,6 +74,7 @@ public:
 	std::vector<std::vector<int>> m_cluster;
 	std::vector<DirectX::XMFLOAT3> m_cluster_origin;
 	std::vector<DirectX::XMFLOAT3> m_cluster_extension;
+	int static_cluster_size;
 
 	GaussianPoints(std::shared_ptr<World> world,std::string asset="");
 	GaussianPoints(std::shared_ptr<World> world, DirectX::XMFLOAT3 position, DirectX::XMFLOAT3 scale, DirectX::XMFLOAT3 rotation, std::string asset = "");

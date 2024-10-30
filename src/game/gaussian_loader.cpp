@@ -18,8 +18,9 @@ struct RichPoint
 	float rot[4];
 };
 
-void GSLoader::Load(std::string path)
+void GSLoader::Load(std::string path, int static_cluster_size)
 {
+	assert(static_cluster_size != 0);//do not support dynamic size yet.
 	position.clear();
 	color.clear();
 	cov3d.clear();
@@ -115,17 +116,17 @@ void GSLoader::Load(std::string path)
 		}
 	}
 
-	BuildBVH();
+	BuildBVH(static_cluster_size);
 
 
 
 	return;
 }
 
-void GSLoader::BuildBVH()
+void GSLoader::BuildBVH(int static_cluster_size)
 {
 	//find global 
-	std::unique_ptr<BVHManager> bvh = std::make_unique<BVHManager>(64);
+	std::unique_ptr<BVHManager> bvh = std::make_unique<BVHManager>(static_cluster_size);
 	std::vector<AABB> gaussian_aabb;
 	gaussian_aabb.reserve(position.size());
 	for (int i = 0; i < position.size(); i++)

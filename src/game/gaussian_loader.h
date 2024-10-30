@@ -4,7 +4,7 @@
 class GSLoader
 {
 private:
-	void BuildBVH();
+	void BuildBVH(int static_cluster_size=64);
 public:
 	std::vector<DirectX::XMFLOAT3> position;
 	std::vector<DirectX::XMFLOAT4> color;
@@ -16,5 +16,5 @@ public:
 	std::vector<DirectX::XMFLOAT3> cluster_AABB_extension;
 
 
-	void Load(std::string path);
+	void Load(std::string path,int static_cluster_size);
 };
