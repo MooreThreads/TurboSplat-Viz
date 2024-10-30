@@ -145,7 +145,7 @@ void GaussianSplattingShadingModel::PopulateCommandList(Microsoft::WRL::ComPtr<I
 		};
 		command_list->ResourceBarrier(_countof(uav_barriers), uav_barriers);
 	}
-	pipeline_list.gs_sort_pipeline->Dispatch(command_list, 987327,
+	pipeline_list.gs_sort_pipeline->Dispatch(command_list,
 		buffer.point_counter_buffer, buffer.indirect_arg_sort_buffer,
 		buffer.visible_point_depth_buffer, buffer.visible_point_buffer);
 	pipeline_list.draw_mesh_gs_pipeline->Draw(command_list, binded_heaps, buffer_index, p_view, p_render_proxy);

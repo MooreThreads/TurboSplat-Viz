@@ -56,9 +56,7 @@
 
 cbuffer cbGpuSorting : register(b0)
 {
-    uint e_numKeys11;
     uint e_radixShift;
-    uint e_threadBlocks11;
     uint e_isPartial;
 };
 

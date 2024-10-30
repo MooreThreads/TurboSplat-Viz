@@ -450,7 +450,7 @@ void MeshGaussianSort::InitResources()
 void MeshGaussianSort::InitRootSignature()
 {
 	CD3DX12_ROOT_PARAMETER rootParameters[10];
-	rootParameters[0].InitAsConstants(4, 0);
+	rootParameters[0].InitAsConstants(2, 0);
 	rootParameters[1].InitAsConstantBufferView(1);
 	rootParameters[2].InitAsConstantBufferView(2);
 	rootParameters[(UINT)Reg::Sort+3].InitAsUnorderedAccessView((UINT)Reg::Sort);
@@ -535,11 +535,10 @@ void MeshGaussianSort::Dispatch(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList
 {
 	assert(false);
 }
-void MeshGaussianSort::Dispatch(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list, uint32_t ele_num, 
+void MeshGaussianSort::Dispatch(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list,
 	Microsoft::WRL::ComPtr<ID3D12Resource> ele_num_buffer, Microsoft::WRL::ComPtr<ID3D12Resource> block_num_buffer,
 	Microsoft::WRL::ComPtr<ID3D12Resource> in_out_sort_buffer, Microsoft::WRL::ComPtr<ID3D12Resource> in_out_payload_buffer)
 {
-	assert(ele_num < max_ele_num);
 	SetRootSignature(command_list, ele_num_buffer, block_num_buffer, in_out_sort_buffer, in_out_payload_buffer);
 
 
@@ -548,7 +547,7 @@ void MeshGaussianSort::Dispatch(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList
 		command_list->SetPipelineState(m_init_sweep_pso.Get());
 
 		uint32_t threadBlocks = max_partition_num;
-		std::vector<uint32_t> t = { 0, 0, threadBlocks, 0 };
+		std::vector<uint32_t> t = { 0, 0 };
 		command_list->SetComputeRoot32BitConstants(0, (uint32_t)t.size(), t.data(), 0);
 		command_list->Dispatch(256, 1, 1);
 
@@ -569,7 +568,7 @@ void MeshGaussianSort::Dispatch(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList
 		uint32_t threadBlocks = max_global_hist_partitions;
 		assert(threadBlocks < k_maxDim);
 
-		std::vector<uint32_t> t = { ele_num,0,0, k_isPartialBitFlag };
+		std::vector<uint32_t> t = { 0, k_isPartialBitFlag };
 		command_list->SetComputeRoot32BitConstants(0, (uint32_t)t.size(), t.data(), 0);
 		command_list->Dispatch(threadBlocks, 1, 1);
 		
@@ -579,13 +578,11 @@ void MeshGaussianSort::Dispatch(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList
 		command_list->ResourceBarrier(_countof(uav_barriers), uav_barriers);
 	}
 	
-	const uint32_t partitions = std::ceil(ele_num / (float)partitionSize);
 	{
 		//scan
 		command_list->SetPipelineState(m_scan_pso.Get());
 
-		uint32_t threadBlocks = partitions;
-		std::vector<uint32_t> t = { 0, 0, threadBlocks, 0 };
+		std::vector<uint32_t> t = { 0, 0 };
 		command_list->SetComputeRoot32BitConstants(0, (uint32_t)t.size(), t.data(), 0);
 		command_list->Dispatch(k_radixPasses, 1, 1);
 
@@ -600,8 +597,7 @@ void MeshGaussianSort::Dispatch(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList
 		//pass
 
 		command_list->SetPipelineState(m_digit_binning_pass_pso.Get());
-		uint32_t threadBlocks = partitions;
-		assert(threadBlocks < k_maxDim);
+		//assert(threadBlocks < k_maxDim);
 		Microsoft::WRL::ComPtr<ID3D12Resource> alt_buffer = m_alt_buffer;
 		Microsoft::WRL::ComPtr<ID3D12Resource> alt_payload_buffer = m_alt_payload_buffer;
 
@@ -613,7 +609,7 @@ void MeshGaussianSort::Dispatch(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList
 			command_list->SetComputeRootUnorderedAccessView(3 + (UINT)Reg::AltPayload, alt_payload_buffer->GetGPUVirtualAddress());
 
 
-			std::vector<uint32_t> t = { ele_num, radixShift, threadBlocks, 0 };
+			std::vector<uint32_t> t = { radixShift, 0 };
 			command_list->SetComputeRoot32BitConstants(0, (uint32_t)t.size(), t.data(), 0);
 			//command_list->Dispatch(threadBlocks, 1, 1);
 			command_list->ExecuteIndirect(m_command_signature.Get(), 1, block_num_buffer.Get(),0,nullptr,0);

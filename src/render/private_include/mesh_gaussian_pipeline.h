@@ -155,7 +155,7 @@ protected:
 		D3D12_GPU_DESCRIPTOR_HANDLE stack_bottom[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES]);
 public:
 	MeshGaussianSort();
-	virtual void Dispatch(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list, uint32_t ele_num, 
+	virtual void Dispatch(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list,
 		Microsoft::WRL::ComPtr<ID3D12Resource> ele_num_buffer, Microsoft::WRL::ComPtr<ID3D12Resource> block_num_buffer,
 		Microsoft::WRL::ComPtr<ID3D12Resource> in_out_sort_buffer, Microsoft::WRL::ComPtr<ID3D12Resource> in_out_payload_buffer);
 	virtual void Dispatch(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list,
