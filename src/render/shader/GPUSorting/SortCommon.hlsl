@@ -56,10 +56,20 @@
 
 cbuffer cbGpuSorting : register(b0)
 {
-    uint e_numKeys;
+    uint e_numKeys11;
     uint e_radixShift;
-    uint e_threadBlocks;
+    uint e_threadBlocks11;
     uint e_isPartial;
+};
+
+cbuffer cbGpuSorting : register(b1)
+{
+    uint e_numKeys;
+};
+
+cbuffer cbGpuSorting : register(b2)
+{
+    uint e_threadBlocks;
 };
 
 #if defined(KEY_UINT)

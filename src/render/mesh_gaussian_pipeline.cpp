@@ -23,7 +23,7 @@ void MeshGaussianClear::InitRootSignature()
 {
 	CD3DX12_ROOT_PARAMETER rootParameters[1];
 	CD3DX12_DESCRIPTOR_RANGE DescRange[1];
-	DescRange[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 3, 0);
+	DescRange[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 4, 0);
 	rootParameters[0].InitAsDescriptorTable(_countof(DescRange), DescRange, D3D12_SHADER_VISIBILITY_ALL);
 
 	CD3DX12_ROOT_SIGNATURE_DESC rootSignatureDesc;
@@ -36,13 +36,14 @@ void MeshGaussianClear::InitRootSignature()
 void MeshGaussianClear::Init(std::shared_ptr<D3DHelper::Device> device,
 	Microsoft::WRL::ComPtr<ID3D12Resource> out_visible_cluster_counter_buffer,
 	Microsoft::WRL::ComPtr<ID3D12Resource> out_visible_point_counter_buffer,
-	Microsoft::WRL::ComPtr<ID3D12Resource> out_filldata_arg_buffer)
+	Microsoft::WRL::ComPtr<ID3D12Resource> out_filldata_arg_buffer,
+	Microsoft::WRL::ComPtr<ID3D12Resource> out_filldata_sort_buffer)
 {
 	ComputePipeline::Init(device);
 
 
 	D3D12_DESCRIPTOR_HEAP_DESC heap_desc{};
-	heap_desc.NumDescriptors = 3;
+	heap_desc.NumDescriptors = 4;
 	heap_desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 	heap_desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 	m_heaps[D3D12_DESCRIPTOR_HEAP_TYPE::D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV].Init(heap_desc, m_device);
@@ -73,6 +74,8 @@ void MeshGaussianClear::Init(std::shared_ptr<D3DHelper::Device> device,
 		indirect_arg_uav_desc.Buffer.StructureByteStride = sizeof(D3D12_DISPATCH_ARGUMENTS);
 		m_device->GetDevice()->CreateUnorderedAccessView(out_filldata_arg_buffer.Get(), nullptr, &indirect_arg_uav_desc,
 			m_heaps[D3D12_DESCRIPTOR_HEAP_TYPE::D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV][2]);
+		m_device->GetDevice()->CreateUnorderedAccessView(out_filldata_sort_buffer.Get(), nullptr, &indirect_arg_uav_desc,
+			m_heaps[D3D12_DESCRIPTOR_HEAP_TYPE::D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV][3]);
 	}
 
 }
@@ -228,6 +231,7 @@ void MeshGaussianFillData::Init(std::shared_ptr<D3DHelper::Device> device,
 	Microsoft::WRL::ComPtr<ID3D12Resource> out_visible_point_buffer,
 	Microsoft::WRL::ComPtr<ID3D12Resource> out_visible_depth_buffer,
 	Microsoft::WRL::ComPtr<ID3D12Resource> out_visible_point_counter_buffer,
+	Microsoft::WRL::ComPtr<ID3D12Resource> out_indirect_arg_sort_buffer,
 	const int MAX_CLUSTER_NUM, const int MAX_POINTS_NUM)
 {
 	ComputePipeline::Init(device);
@@ -237,7 +241,7 @@ void MeshGaussianFillData::Init(std::shared_ptr<D3DHelper::Device> device,
 
 
 	D3D12_DESCRIPTOR_HEAP_DESC heap_desc{};
-	heap_desc.NumDescriptors = 5;
+	heap_desc.NumDescriptors = 6;
 	heap_desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 	heap_desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 	m_heaps[D3D12_DESCRIPTOR_HEAP_TYPE::D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV].Init(heap_desc, m_device);
@@ -292,6 +296,17 @@ void MeshGaussianFillData::Init(std::shared_ptr<D3DHelper::Device> device,
 	m_device->GetDevice()->CreateUnorderedAccessView(out_visible_point_counter_buffer.Get(), nullptr, &visible_points_counter_uav_desc,
 		m_heaps[D3D12_DESCRIPTOR_HEAP_TYPE::D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV][4]);
 
+	D3D12_UNORDERED_ACCESS_VIEW_DESC indirect_uav_desc = {};
+	indirect_uav_desc.Format = DXGI_FORMAT_R32_TYPELESS;
+	indirect_uav_desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
+	indirect_uav_desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_RAW;
+	indirect_uav_desc.Buffer.CounterOffsetInBytes = 0;
+	indirect_uav_desc.Buffer.FirstElement = 0;
+	indirect_uav_desc.Buffer.NumElements = 1;
+	indirect_uav_desc.Buffer.StructureByteStride = 0;
+	m_device->GetDevice()->CreateUnorderedAccessView(out_indirect_arg_sort_buffer.Get(), nullptr, &indirect_uav_desc,
+		m_heaps[D3D12_DESCRIPTOR_HEAP_TYPE::D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV][5]);
+
 
 }
 void MeshGaussianFillData::InitResources()
@@ -305,8 +320,8 @@ void MeshGaussianFillData::InitRootSignature()
 	rootParameters[0].InitAsConstants(sizeof(ViewBuffer) / 4, 0, 0, D3D12_SHADER_VISIBILITY_ALL);
 	rootParameters[1].InitAsConstants(sizeof(BatchBuffer) / 4, 1, 0, D3D12_SHADER_VISIBILITY_ALL);
 	CD3DX12_DESCRIPTOR_RANGE DescRange[2];
-	DescRange[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 4, 0);//gaussian_clusters pints
-	DescRange[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 3, 0);//visible_clusters visible_clusters_num
+	DescRange[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 4, 0);
+	DescRange[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 4, 0);
 	rootParameters[2].InitAsDescriptorTable(_countof(DescRange), DescRange, D3D12_SHADER_VISIBILITY_ALL);
 
 	CD3DX12_ROOT_SIGNATURE_DESC rootSignatureDesc;
@@ -434,15 +449,17 @@ void MeshGaussianSort::InitResources()
 
 void MeshGaussianSort::InitRootSignature()
 {
-	CD3DX12_ROOT_PARAMETER rootParameters[8];
+	CD3DX12_ROOT_PARAMETER rootParameters[10];
 	rootParameters[0].InitAsConstants(4, 0);
-	rootParameters[1].InitAsUnorderedAccessView((UINT)Reg::Sort);
-	rootParameters[2].InitAsUnorderedAccessView((UINT)Reg::Alt);
-	rootParameters[3].InitAsUnorderedAccessView((UINT)Reg::SortPayload);
-	rootParameters[4].InitAsUnorderedAccessView((UINT)Reg::AltPayload);
-	rootParameters[5].InitAsUnorderedAccessView((UINT)Reg::GlobalHist);
-	rootParameters[6].InitAsUnorderedAccessView((UINT)Reg::PassHist);
-	rootParameters[7].InitAsUnorderedAccessView((UINT)Reg::Index);
+	rootParameters[1].InitAsConstantBufferView(1);
+	rootParameters[2].InitAsConstantBufferView(2);
+	rootParameters[(UINT)Reg::Sort+3].InitAsUnorderedAccessView((UINT)Reg::Sort);
+	rootParameters[(UINT)Reg::Alt+3].InitAsUnorderedAccessView((UINT)Reg::Alt);
+	rootParameters[(UINT)Reg::SortPayload+3].InitAsUnorderedAccessView((UINT)Reg::SortPayload);
+	rootParameters[(UINT)Reg::AltPayload+3].InitAsUnorderedAccessView((UINT)Reg::AltPayload);
+	rootParameters[(UINT)Reg::GlobalHist+3].InitAsUnorderedAccessView((UINT)Reg::GlobalHist);
+	rootParameters[(UINT)Reg::PassHist+3].InitAsUnorderedAccessView((UINT)Reg::PassHist);
+	rootParameters[(UINT)Reg::Index+3].InitAsUnorderedAccessView((UINT)Reg::Index);
 	CD3DX12_ROOT_SIGNATURE_DESC rootSignatureDesc;
 	rootSignatureDesc.Init(_countof(rootParameters), rootParameters, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 	Microsoft::WRL::ComPtr<ID3DBlob> serialized_signature_desc;
@@ -450,24 +467,28 @@ void MeshGaussianSort::InitRootSignature()
 	ThrowIfFailed(D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &serialized_signature_desc, &error));
 	ThrowIfFailed(m_device->GetDevice()->CreateRootSignature(0, serialized_signature_desc->GetBufferPointer(), serialized_signature_desc->GetBufferSize(), IID_PPV_ARGS(&m_root_signature)));
 
+	InitIndirect();
 }
 void MeshGaussianSort::SetRootSignature(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list, const ViewInfo* p_view, const RenderProxy* proxy,
 	D3D12_GPU_DESCRIPTOR_HANDLE stack_bottom[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES])
 {
 	assert(false);
 }
-void MeshGaussianSort::SetRootSignature(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list, uint32_t element_num,
+void MeshGaussianSort::SetRootSignature(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list, 
+	Microsoft::WRL::ComPtr<ID3D12Resource> element_num, Microsoft::WRL::ComPtr<ID3D12Resource> blocks_num,
 	Microsoft::WRL::ComPtr<ID3D12Resource> in_out_sort_buffer, Microsoft::WRL::ComPtr<ID3D12Resource> in_out_payload_buffer)
 {
 
 	command_list->SetComputeRootSignature(m_root_signature.Get());
-	command_list->SetComputeRootUnorderedAccessView(1 + (UINT)Reg::Sort, in_out_sort_buffer->GetGPUVirtualAddress());
-	command_list->SetComputeRootUnorderedAccessView(1 + (UINT)Reg::Alt, m_alt_buffer->GetGPUVirtualAddress());
-	command_list->SetComputeRootUnorderedAccessView(1 + (UINT)Reg::SortPayload, in_out_payload_buffer->GetGPUVirtualAddress());
-	command_list->SetComputeRootUnorderedAccessView(1 + (UINT)Reg::AltPayload, m_alt_payload_buffer->GetGPUVirtualAddress());
-	command_list->SetComputeRootUnorderedAccessView(1 + (UINT)Reg::GlobalHist, m_globalhist_buffer->GetGPUVirtualAddress());
-	command_list->SetComputeRootUnorderedAccessView(1 + (UINT)Reg::PassHist, m_passhist_buffer->GetGPUVirtualAddress());
-	command_list->SetComputeRootUnorderedAccessView(1 + (UINT)Reg::Index, m_index_buffer->GetGPUVirtualAddress());
+	command_list->SetComputeRootConstantBufferView(1, element_num->GetGPUVirtualAddress());
+	command_list->SetComputeRootConstantBufferView(2, blocks_num->GetGPUVirtualAddress());
+	command_list->SetComputeRootUnorderedAccessView(3 + (UINT)Reg::Sort, in_out_sort_buffer->GetGPUVirtualAddress());
+	command_list->SetComputeRootUnorderedAccessView(3 + (UINT)Reg::Alt, m_alt_buffer->GetGPUVirtualAddress());
+	command_list->SetComputeRootUnorderedAccessView(3 + (UINT)Reg::SortPayload, in_out_payload_buffer->GetGPUVirtualAddress());
+	command_list->SetComputeRootUnorderedAccessView(3 + (UINT)Reg::AltPayload, m_alt_payload_buffer->GetGPUVirtualAddress());
+	command_list->SetComputeRootUnorderedAccessView(3 + (UINT)Reg::GlobalHist, m_globalhist_buffer->GetGPUVirtualAddress());
+	command_list->SetComputeRootUnorderedAccessView(3 + (UINT)Reg::PassHist, m_passhist_buffer->GetGPUVirtualAddress());
+	command_list->SetComputeRootUnorderedAccessView(3 + (UINT)Reg::Index, m_index_buffer->GetGPUVirtualAddress());
 }
 
 void MeshGaussianSort::InitPSO()
@@ -514,19 +535,19 @@ void MeshGaussianSort::Dispatch(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList
 {
 	assert(false);
 }
-void MeshGaussianSort::Dispatch(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list, uint32_t ele_num,
+void MeshGaussianSort::Dispatch(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list, uint32_t ele_num, 
+	Microsoft::WRL::ComPtr<ID3D12Resource> ele_num_buffer, Microsoft::WRL::ComPtr<ID3D12Resource> block_num_buffer,
 	Microsoft::WRL::ComPtr<ID3D12Resource> in_out_sort_buffer, Microsoft::WRL::ComPtr<ID3D12Resource> in_out_payload_buffer)
 {
 	assert(ele_num < max_ele_num);
-	SetRootSignature(command_list, ele_num, in_out_sort_buffer, in_out_payload_buffer);
+	SetRootSignature(command_list, ele_num_buffer, block_num_buffer, in_out_sort_buffer, in_out_payload_buffer);
 
 
-	const uint32_t partitions = std::ceil(ele_num / (float)partitionSize);
 	{
 		//init sweep
 		command_list->SetPipelineState(m_init_sweep_pso.Get());
 
-		uint32_t threadBlocks = partitions;
+		uint32_t threadBlocks = max_partition_num;
 		std::vector<uint32_t> t = { 0, 0, threadBlocks, 0 };
 		command_list->SetComputeRoot32BitConstants(0, (uint32_t)t.size(), t.data(), 0);
 		command_list->Dispatch(256, 1, 1);
@@ -540,15 +561,15 @@ void MeshGaussianSort::Dispatch(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList
 	}
 
 	
-	uint32_t globalHistPartitions = std::ceil(ele_num / (float)k_globalHistPartitionSize);
+	uint32_t max_global_hist_partitions = (max_ele_num+ k_globalHistPartitionSize-1) /k_globalHistPartitionSize;
 	{
 		//global hist
 		command_list->SetPipelineState(m_global_hist_pso.Get());
 
-		uint32_t threadBlocks = globalHistPartitions;
+		uint32_t threadBlocks = max_global_hist_partitions;
 		assert(threadBlocks < k_maxDim);
 
-		std::vector<uint32_t> t = { ele_num,0,threadBlocks, k_isPartialBitFlag };
+		std::vector<uint32_t> t = { ele_num,0,0, k_isPartialBitFlag };
 		command_list->SetComputeRoot32BitConstants(0, (uint32_t)t.size(), t.data(), 0);
 		command_list->Dispatch(threadBlocks, 1, 1);
 		
@@ -558,6 +579,7 @@ void MeshGaussianSort::Dispatch(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList
 		command_list->ResourceBarrier(_countof(uav_barriers), uav_barriers);
 	}
 	
+	const uint32_t partitions = std::ceil(ele_num / (float)partitionSize);
 	{
 		//scan
 		command_list->SetPipelineState(m_scan_pso.Get());
@@ -585,15 +607,16 @@ void MeshGaussianSort::Dispatch(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList
 
 		for (uint32_t radixShift = 0; radixShift < 32; radixShift += 8)
 		{
-			command_list->SetComputeRootUnorderedAccessView(1 + (UINT)Reg::Sort, in_out_sort_buffer->GetGPUVirtualAddress());
-			command_list->SetComputeRootUnorderedAccessView(1 + (UINT)Reg::Alt, alt_buffer->GetGPUVirtualAddress());
-			command_list->SetComputeRootUnorderedAccessView(1 + (UINT)Reg::SortPayload, in_out_payload_buffer->GetGPUVirtualAddress());
-			command_list->SetComputeRootUnorderedAccessView(1 + (UINT)Reg::AltPayload, alt_payload_buffer->GetGPUVirtualAddress());
+			command_list->SetComputeRootUnorderedAccessView(3 + (UINT)Reg::Sort, in_out_sort_buffer->GetGPUVirtualAddress());
+			command_list->SetComputeRootUnorderedAccessView(3 + (UINT)Reg::Alt, alt_buffer->GetGPUVirtualAddress());
+			command_list->SetComputeRootUnorderedAccessView(3 + (UINT)Reg::SortPayload, in_out_payload_buffer->GetGPUVirtualAddress());
+			command_list->SetComputeRootUnorderedAccessView(3 + (UINT)Reg::AltPayload, alt_payload_buffer->GetGPUVirtualAddress());
 
 
 			std::vector<uint32_t> t = { ele_num, radixShift, threadBlocks, 0 };
 			command_list->SetComputeRoot32BitConstants(0, (uint32_t)t.size(), t.data(), 0);
-			command_list->Dispatch(threadBlocks, 1, 1);
+			//command_list->Dispatch(threadBlocks, 1, 1);
+			command_list->ExecuteIndirect(m_command_signature.Get(), 1, block_num_buffer.Get(),0,nullptr,0);
 			
 
 			D3D12_RESOURCE_BARRIER uav_barriers[] = {

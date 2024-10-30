@@ -69,8 +69,7 @@ void InitSweep(uint3 id : SV_DispatchThreadID)
 inline void HistogramDigitCounts(uint gtid, uint gid)
 {
     const uint histOffset = gtid / 64 * RADIX;
-    const uint partitionEnd = gid == e_threadBlocks - 1 ?
-        e_numKeys : (gid + 1) * G_HIST_PART_SIZE;
+    const uint partitionEnd = min(e_numKeys, (gid + 1) * G_HIST_PART_SIZE);
     
     uint t;
     for (uint i = gtid + gid * G_HIST_PART_SIZE; i < partitionEnd; i += G_HIST_DIM)

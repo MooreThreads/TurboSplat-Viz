@@ -15,7 +15,8 @@ public:
 	virtual void Init(std::shared_ptr<D3DHelper::Device> device,
 		Microsoft::WRL::ComPtr<ID3D12Resource> out_visible_cluster_counter_buffer,
 		Microsoft::WRL::ComPtr<ID3D12Resource> out_visible_point_counter_buffer,
-		Microsoft::WRL::ComPtr<ID3D12Resource> out_filldata_arg_buffer);
+		Microsoft::WRL::ComPtr<ID3D12Resource> out_filldata_arg_buffer,
+		Microsoft::WRL::ComPtr<ID3D12Resource> out_filldata_sort_buffer);
 	virtual void Dispatch(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list,
 		D3DHelper::StaticDescriptorStack(&param_stacks)[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES],
 		int buffer_index,
@@ -80,6 +81,7 @@ public:
 		Microsoft::WRL::ComPtr<ID3D12Resource> out_visible_point_buffer,
 		Microsoft::WRL::ComPtr<ID3D12Resource> out_visible_depth_buffer,
 		Microsoft::WRL::ComPtr<ID3D12Resource> out_visible_point_counter_buffer,
+		Microsoft::WRL::ComPtr<ID3D12Resource> out_indirect_arg_sort_buffer,
 		const int MAX_CLUSTER_NUM,const int MAX_POINTS_NUM);
 	virtual void Dispatch(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list,
 		D3DHelper::StaticDescriptorStack(&param_stacks)[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES],
@@ -146,13 +148,15 @@ protected:
 	virtual void InitPSO();
 	virtual void InitResources();
 	virtual void InitRootSignature();
-	virtual void SetRootSignature(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list, uint32_t element_num,
+	virtual void SetRootSignature(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list, 
+		Microsoft::WRL::ComPtr<ID3D12Resource> element_num, Microsoft::WRL::ComPtr<ID3D12Resource> blocks_num,
 		Microsoft::WRL::ComPtr<ID3D12Resource> in_out_sort_buffer, Microsoft::WRL::ComPtr<ID3D12Resource> in_out_payload_buffer);
 	virtual void SetRootSignature(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list, const ViewInfo* p_view, const RenderProxy* proxy,
 		D3D12_GPU_DESCRIPTOR_HANDLE stack_bottom[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES]);
 public:
 	MeshGaussianSort();
-	virtual void Dispatch(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list, uint32_t ele_num,
+	virtual void Dispatch(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list, uint32_t ele_num, 
+		Microsoft::WRL::ComPtr<ID3D12Resource> ele_num_buffer, Microsoft::WRL::ComPtr<ID3D12Resource> block_num_buffer,
 		Microsoft::WRL::ComPtr<ID3D12Resource> in_out_sort_buffer, Microsoft::WRL::ComPtr<ID3D12Resource> in_out_payload_buffer);
 	virtual void Dispatch(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> command_list,
 		D3DHelper::StaticDescriptorStack(&param_stacks)[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES],

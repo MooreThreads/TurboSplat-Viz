@@ -15,7 +15,7 @@ fov(fov), near_z(near_z), far_z(far_z), position(position), rotation(rotation)
 
 void Camera::tick()
 {
-	//rotation.y += 0.01f;
+	rotation.y += 0.01f;
 }
 
 DirectX::XMMATRIX Camera::GetViewMatrix()
