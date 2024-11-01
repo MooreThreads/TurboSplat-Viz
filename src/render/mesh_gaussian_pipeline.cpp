@@ -958,5 +958,5 @@ void MeshGaussianRaster::Draw(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> 
 	Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList6> command_list6;
 	command_list.As(&command_list6);
 	assert(command_list6);
-	command_list6->DispatchMesh(proxy->GetVertexCountPerInstance()/128, 1, 1);//todo indirect dispatch
+	command_list6->DispatchMesh(proxy->GetVertexCountPerInstance()/64, 1, 1);//todo indirect dispatch
 }

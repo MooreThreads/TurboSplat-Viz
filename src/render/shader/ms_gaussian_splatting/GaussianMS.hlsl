@@ -59,6 +59,8 @@ void main(
         0, 0, 0);
         float3x3 world_view_ray_trans = mul(ray_space_transform, world_view_trans);
         float2x2 cov2d = mul(mul(world_view_ray_trans, gaussian_point.cov3d), transpose(world_view_ray_trans));
+        cov2d[0][0] += 0.3f;
+        cov2d[1][1] += 0.3f;
         
     //eigen(vec2d)
         float det = cov2d[0][0] * cov2d[1][1] - cov2d[0][1] * cov2d[1][0];
