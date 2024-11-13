@@ -3,8 +3,8 @@ project(DX12GS)
 
 include(cmake/visualstudio.cmake)
 
-set(LIBRARY_OUTPUT_PATH "${CMAKE_BINARY_DIR}/bin")
-set(EXECUTABLE_OUTPUT_PATH "${CMAKE_BINARY_DIR}/bin")
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
 
 set(CMAKE_CXX_STANDARD 17)
 add_subdirectory(src)

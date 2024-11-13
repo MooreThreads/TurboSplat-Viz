@@ -1,3 +1,7 @@
 out
 .vs
 asset
+bin
+*.7z
+*.zip
+CMakeSettings.json

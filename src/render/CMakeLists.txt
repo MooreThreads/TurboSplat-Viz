@@ -21,7 +21,7 @@ add_custom_command(
          TARGET RenderShader POST_BUILD
          COMMAND ${CMAKE_COMMAND} -E copy_directory              
          "${CMAKE_CURRENT_SOURCE_DIR}/shader"
-         "${EXECUTABLE_OUTPUT_PATH}/shader"
+         "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/shader"
          COMMENT "Copying shaders" VERBATIM
          )
 
@@ -32,7 +32,7 @@ add_custom_command(
          TARGET AgilityDX12 POST_BUILD
          COMMAND ${CMAKE_COMMAND} -E copy_directory              
          "${CMAKE_CURRENT_SOURCE_DIR}/D3d12-Agility/bin"
-         "${EXECUTABLE_OUTPUT_PATH}/D3D12"
+         "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/D3D12"
          COMMENT "Copying agility sdk" VERBATIM
          )
 
@@ -42,6 +42,6 @@ add_custom_command(
          TARGET DxCompiler POST_BUILD
          COMMAND ${CMAKE_COMMAND} -E copy_directory              
          "${CMAKE_CURRENT_SOURCE_DIR}/dxc/bin/x64"
-         "${EXECUTABLE_OUTPUT_PATH}"
+         "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}"
          COMMENT "Copying DxCompiler" VERBATIM
          )
