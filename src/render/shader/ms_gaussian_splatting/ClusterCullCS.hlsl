@@ -38,6 +38,7 @@ void main(
     bool visible = false;
     if(tid<clusters_num)
     {
+        //todo world transform
         visible = true;
         float3 aabb_origin = gaussian_clusters[tid].origin;
         float3 aabb_extend = gaussian_clusters[tid].extension;

@@ -1,5 +1,6 @@
 #include"viewport_info.h"
 #include"world.h"
+#include "windowswindow.h"
 #include<memory>
 #include<vector>
 #include<atomic>
@@ -23,17 +24,18 @@ private:
 	std::vector<Viewport> m_viewports;
 	ViewportInfo m_gameclient_viewport;
 	std::shared_ptr<World> m_game_world;
+	std::unique_ptr<Window> m_game_window;
 	int m_frame_counter;
 	std::atomic<bool> b_loop;
 	
-	void CreateGameClientViewport();
+	void CreateGameWindow(HINSTANCE hinst);
 	void RenderInit();
 	void GameInit();
 public:
 	MainLoop();
 	~MainLoop();
 	
-	void Init();
+	void Init(HINSTANCE hinst);
 	void Loop();
 	void Stop();
 };

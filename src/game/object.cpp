@@ -54,7 +54,10 @@ void SceneObject::DoRenderUpdate()
 		if (b_render_data_dirty)
 		{
 			cached_render_proxy=CreateRenderProxy();
-			cur_world->GetScene()->AddRenderProxy(cached_render_proxy);
+			if (cached_render_proxy)
+			{
+				cur_world->GetScene()->AddRenderProxy(cached_render_proxy);
+			}
 			b_render_data_dirty = false;
 		}
 		
