@@ -34,6 +34,14 @@ DirectX::XMFLOAT3 DefaultInput::GetMovement()
 	{
 		ret_val.y -= 1;
 	}
+	if (state.Q)
+	{
+		ret_val.z -= 1;
+	}
+	if (state.E)
+	{
+		ret_val.z += 1;
+	}
 	return ret_val;
 }
 DirectX::XMFLOAT3 DefaultInput::GetTurn()

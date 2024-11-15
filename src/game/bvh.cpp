@@ -61,12 +61,12 @@ BVHManager::BVHManager(int chunk_size):phead(nullptr), leaf2primitive()
 	this->chunk_size = chunk_size;
 }
 
-void BVHManager::RecursiveBuild(std::shared_ptr<BVHNode> cur_node)
+bool BVHManager::RecursiveBuild(std::shared_ptr<BVHNode> cur_node)
 {
 	int childs_num = cur_node->childs.size();
 	if (childs_num <= chunk_size)
 	{
-		return;
+		return false;
 	}
 
 	//select dim and sort
@@ -111,11 +111,28 @@ void BVHManager::RecursiveBuild(std::shared_ptr<BVHNode> cur_node)
 		right->Add(cur_node->childs[i]);
 	}
 	cur_node->childs.clear();
-	cur_node->childs.push_back(left);
-	cur_node->childs.push_back(right);
 
-	RecursiveBuild(left);
-	RecursiveBuild(right);
+	if (RecursiveBuild(left))
+	{
+		cur_node->childs.insert(cur_node->childs.end(), left->childs.begin(), left->childs.end());
+		left.reset();
+	}
+	else
+	{
+		cur_node->childs.push_back(left);
+	}
+
+	if (RecursiveBuild(right))
+	{
+		cur_node->childs.insert(cur_node->childs.end(), right->childs.begin(), right->childs.end());
+		right.reset();
+	}
+	else
+	{
+		cur_node->childs.push_back(right);
+	}
+
+	return true;
 }
 
 float BVHManager::GetCost(const BVHNode* cur_node, const std::vector<std::shared_ptr<BVHNode>>& sorted_childs, int start, int end)
@@ -143,8 +160,10 @@ void BVHManager::GetClusterInternel(const std::shared_ptr<BVHNode>& node, std::v
 	assert(node->childs.size() > 0);//not leaf
 	if (node->childs[0]->childs.size() > 0)
 	{
-		GetClusterInternel(node->childs[0], cluster, cluster_aabb);
-		GetClusterInternel(node->childs[1], cluster, cluster_aabb);
+		for (const auto& child_node : node->childs)
+		{
+			GetClusterInternel(child_node, cluster, cluster_aabb);
+		}
 	}
 	else
 	{

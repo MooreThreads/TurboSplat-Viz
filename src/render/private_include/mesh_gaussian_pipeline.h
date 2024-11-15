@@ -122,7 +122,7 @@ protected:
 	const uint32_t k_globalHistPartitionSize = 32768;
 
 	const uint32_t partitionSize= keysPerThread * threadsPerThreadBlock;
-	const uint32_t max_partition_num= 1024;
+	const uint32_t max_partition_num= 4096;
 	const uint32_t max_ele_num= max_partition_num * partitionSize;
 	
 

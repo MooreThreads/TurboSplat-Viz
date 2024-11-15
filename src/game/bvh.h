@@ -30,7 +30,7 @@ private:
 	std::shared_ptr<BVHNode> phead;
 	std::map<BVHNode*, int> leaf2primitive;
 	int chunk_size;
-	void RecursiveBuild(std::shared_ptr<BVHNode> cur_node);
+	bool RecursiveBuild(std::shared_ptr<BVHNode> cur_node);
 	float GetCost(const BVHNode* cur_node, const std::vector<std::shared_ptr<BVHNode>>& sorted_childs, int start, int end);
 	void GetClusterInternel(const std::shared_ptr<BVHNode>& node, std::vector<std::vector<int>>& cluster, std::vector<AABB>& cluster_aabb);
 	

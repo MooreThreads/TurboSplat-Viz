@@ -24,5 +24,5 @@ public:
 	void Render(std::shared_ptr<Scene> scene, ViewportInfo viewport_infos, int framecount);
 	void RegisterViewportAndWolrd(WorldId world_id, ViewportInfo viewport_infos);
 	void UnregisterViewportAndWolrd(WorldId world_id, ViewportInfo viewport_infos);
-	std::shared_ptr< ShadingModel> GetShadingModelObj(std::string model_name);
+	std::shared_ptr< ShadingModel> GetShadingModelObj(const std::string& model_name);
 };

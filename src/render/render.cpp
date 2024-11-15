@@ -77,7 +77,7 @@ void RendererModule::InitShaders()
 	RegisterShader<GaussianSplattingShadingModel>(m_shading_model);
 }
 
-std::shared_ptr< ShadingModel> RendererModule::GetShadingModelObj(std::string model_name)
+std::shared_ptr< ShadingModel> RendererModule::GetShadingModelObj(const std::string& model_name)
 {
 	auto iter = m_shading_model.find(model_name);
 	assert(iter != m_shading_model.end());

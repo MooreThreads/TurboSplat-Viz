@@ -38,7 +38,8 @@ void GSLoader::Load(std::string path, int static_cluster_size)
 	int header_size = ply_header_str.find("end_header\n") + 11;
 	int point_size = sizeof(RichPoint<0>);
 	assert((file_size - header_size) % point_size == 0);
-	int point_num = std::min((file_size - header_size) / point_size, 5 * 1024 * 1024);
+	int point_num = (file_size - header_size) / point_size;
+	assert(point_num <= 50 * 1024 * 1024);
 	position.reserve(point_num);
 	color.reserve(point_num);
 	cov3d.reserve(point_num);
@@ -115,7 +116,7 @@ void GSLoader::Load(std::string path, int static_cluster_size)
 
 		}
 	}
-
+	buffer.reset();
 	BuildBVH(static_cluster_size);
 
 

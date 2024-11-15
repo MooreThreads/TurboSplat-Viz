@@ -1,0 +1,2 @@
+# DX12-Gagussian-splatting-Viewer
+DX12GSViewer是使用DX12实现的3d-gs渲染器，借助Meshshader的出色性能表现，DX12GSViewer取得了无与伦比的速度提升。传统的使用CUDA实现的gs渲染器（https://github.com/graphdeco-inria/gaussian-splatting）仅使用了GPU计算核心完成渲染。与之相比，DX12GSViewer充分利用了GPU图形管线的光栅能力，取得了2.0x-3.0x的加速。

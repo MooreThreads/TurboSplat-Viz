@@ -36,6 +36,8 @@ DeviceManager::DeviceManager()
 
     for (UINT i = 0; dxgiFactory6->EnumAdapterByGpuPreference(i, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, IID_PPV_ARGS(&dxgiAdapter))!=DXGI_ERROR_NOT_FOUND ; ++i)
     {
+        DXGI_ADAPTER_DESC desc;
+        dxgiAdapter->GetDesc(&desc);
         Microsoft::WRL::ComPtr<ID3D12Device2> d3d_device;
         if (SUCCEEDED(D3D12CreateDevice(dxgiAdapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&d3d_device))))
         {
