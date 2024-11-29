@@ -1,0 +1,3 @@
+[submodule "src/game/inicpp"]
+	path = src/game/inicpp
+	url = https://github.com/dujingning/inicpp.git
