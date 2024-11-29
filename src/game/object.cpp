@@ -377,8 +377,9 @@ void GaussianPoints::Deserialization(const std::vector<uint8_t>& data)
 }
 
 
-GaussianPoints::GaussianPoints(std::shared_ptr<World> world , std::string asset ) :StaticMesh(world), static_cluster_size(0)
+GaussianPoints::GaussianPoints(std::shared_ptr<World> world , std::string asset, int sh_degree) :StaticMesh(world), static_cluster_size(0)
 {
+	assert(sh_degree == 0);
 	m_shading_model_name = typeid(GaussianSplattingShadingModel).name();
 	if (asset.size() == 0)
 	{
@@ -390,9 +391,10 @@ GaussianPoints::GaussianPoints(std::shared_ptr<World> world , std::string asset 
 		load(asset);
 	}
 }
-GaussianPoints::GaussianPoints(std::shared_ptr<World> world, DirectX::XMFLOAT3 position, DirectX::XMFLOAT3 scale, DirectX::XMFLOAT3 rotation, std::string asset):
+GaussianPoints::GaussianPoints(std::shared_ptr<World> world, DirectX::XMFLOAT3 position, DirectX::XMFLOAT3 scale, DirectX::XMFLOAT3 rotation, std::string asset,int sh_degree):
 	StaticMesh(world, position, scale, rotation), static_cluster_size(0)
 {
+	assert(sh_degree == 0);
 	m_shading_model_name = typeid(GaussianSplattingShadingModel).name();
 	if (asset.size() == 0)
 	{

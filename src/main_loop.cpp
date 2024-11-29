@@ -40,7 +40,7 @@ void MainLoop::RenderInit()
 
 void MainLoop::GameInit()
 {
-	m_game_world = std::make_shared<TestWorld>();
+	m_game_world = std::make_shared<DefaultWorld>();
 	m_game_world->Init();
 	m_game_world->RegisterDefaultWorld();
 	return;
@@ -53,7 +53,7 @@ void MainLoop::Init(HINSTANCE hinst)
 
 	CreateGameWindow(hinst);
 
-	DefaultInput::GetInst().Init(std::make_unique<DirectX::Keyboard>(), std::make_unique<DirectX::Mouse>());
+	DefaultInput::GetInst().Init(std::make_unique<DirectX::Keyboard>(), std::make_unique<DirectX::Mouse>(), m_viewports[0].GetInfo().hwnd);
 	
 	RenderInit();
 

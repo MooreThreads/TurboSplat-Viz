@@ -41,10 +41,10 @@ public:
 	
 };
 
-class GAME_MODULE_API TestWorld :public World
+class GAME_MODULE_API DefaultWorld :public World
 {
 protected:
 public:
-	TestWorld();
+	DefaultWorld();
 	virtual void Init();
 };

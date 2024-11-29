@@ -1,2 +1,23 @@
-# DX12-Gagussian-splatting-Viewer
-DX12GSViewer是使用DX12实现的3d-gs渲染器，借助Meshshader的出色性能表现，DX12GSViewer取得了无与伦比的速度提升。传统的使用CUDA实现的gs渲染器（https://github.com/graphdeco-inria/gaussian-splatting）仅使用了GPU计算核心完成渲染。与之相比，DX12GSViewer充分利用了GPU图形管线的光栅能力，取得了2.0x-3.0x的加速。
+
+markdown
+复制代码
+# TurboSplat-Viz
+
+**TurboSplat-Viz** is a 3D Gaussian Splatting (GS) renderer implemented using DirectX 12. Leveraging the exceptional performance of Mesh Shaders, DX12GSViewer achieves unparalleled speed improvements. Compared to traditional GS renderers implemented with CUDA ([reference repository](https://github.com/graphdeco-inria/gaussian-splatting)), which rely solely on GPU compute cores for rendering, DX12GSViewer fully utilizes the GPU graphics pipeline and rasterization capabilities, resulting in a **2.0x–3.0x speedup**.
+
+# Usage
+
+## Configure the GS Scene to Load
+
+Set up your scene in `asset/default_scene.ini`.
+
+*Note: Currently, only spherical harmonic degree (sh_degree) 0 is supported.*
+
+## Controls
+![Image](./doc/control.png)
+
+# Planned Features
+
+- [x] Configuration file & control support  
+- [ ] Support for large scenes (RetinaGS)  
+- [ ] Level of Detail (LOD)  

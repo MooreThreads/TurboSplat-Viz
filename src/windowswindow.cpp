@@ -15,7 +15,9 @@ LRESULT CALLBACK Window::WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
 	case WM_DESTROY:
 		PostQuitMessage(0);
         break;
-
+    case WM_ACTIVATE:
+    case WM_ACTIVATEAPP:
+    case WM_INPUT:
     case WM_MOUSEMOVE:
     case WM_LBUTTONDOWN:
     case WM_LBUTTONUP:

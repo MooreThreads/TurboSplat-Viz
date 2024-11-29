@@ -1,6 +1,8 @@
 #include "world.h"
 #include<vector>
 #include<assert.h>
+#include<iostream>
+#include"inicpp/inicpp.hpp"
 
 
 std::weak_ptr<World> World::default_world_ptr;
@@ -168,18 +170,46 @@ void World::RegisterDefaultWorld()
 	default_world_ptr = shared_from_this();
 }
 
-TestWorld::TestWorld():World()
+DefaultWorld::DefaultWorld():World()
 {
 
 }
 
-void TestWorld::Init()
+void DefaultWorld::Init()
 {
 	//create objs
-	/*auto obj1 = std::make_shared<StaticMesh>(shared_from_this(), DirectX::XMFLOAT3{0.0f,0.0f,1.0f}, DirectX::XMFLOAT3{1.0f,1.0f,1.0f}, DirectX::XMFLOAT3{0.0f,0.0f,0.0f});
-	obj1->Init();*/
-	//auto obj2 = std::make_shared<GaussianPoints>(shared_from_this(), DirectX::XMFLOAT3{0.0f,0.0f,0.0f}, DirectX::XMFLOAT3{1.0f,1.0f,1.0f}, DirectX::XMFLOAT3{0.0f,0.0f,0.0f}, "../asset/garden.ply");
-	//obj2->Init();
+
+	inicpp::IniManager config("../asset/default_scene.ini");
+	auto obj_name_list = config.getSectionsList();
+	for (auto obj_name : obj_name_list)
+	{
+		auto file_name = config[obj_name].toString("file");
+		auto type = config[obj_name].toString("type");
+		if (type == "GS")
+		{
+			int sh_degree= config[obj_name].toInt("sh");
+			if (sh_degree != 0)
+			{
+				std::cout << "default_scene - " << obj_name << ": Currently, only scenes with sh_degree set to 0 are supported";
+				continue;
+			}
+			//float pos_x = config[obj_name].toDouble("position_x");
+			//float pos_y = config[obj_name].toDouble("position_y");
+			//float pos_z = config[obj_name].toDouble("position_z");
+			auto obj = std::make_shared<GaussianPoints>(shared_from_this(), DirectX::XMFLOAT3{ 0,0,0 }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, "../asset/"+file_name);
+			obj->Init();
+		}
+		else
+		{
+			std::cout << "default_scene - " << obj_name << ": type error";
+			continue;
+		}
+		
+
+	}
+
+
+
 
 	auto camera = std::make_shared<Camera>(shared_from_this(), 90,0.1,100, DirectX::XMFLOAT3{ 0,0,0 }, DirectX::XMFLOAT3{ -90,0,0 });
 	camera->Init();

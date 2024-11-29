@@ -3,10 +3,12 @@ DefaultInput::DefaultInput()
 {
 
 }
-void DefaultInput::Init(std::unique_ptr<DirectX::Keyboard>&& keybaord, std::unique_ptr<DirectX::Mouse>&& mouse)
+void DefaultInput::Init(std::unique_ptr<DirectX::Keyboard>&& keybaord, std::unique_ptr<DirectX::Mouse>&& mouse,HWND window)
 {
 	m_keyboard = std::forward<std::unique_ptr<DirectX::Keyboard>>(keybaord);
 	m_mouse = std::forward<std::unique_ptr<DirectX::Mouse>>(mouse);
+	m_mouse->SetWindow(window);
+	m_mouse->SetMode(DirectX::Mouse::MODE_RELATIVE);
 }
 DefaultInput& DefaultInput::GetInst()
 {
@@ -28,24 +30,39 @@ DirectX::XMFLOAT3 DefaultInput::GetMovement()
 	}
 	if (state.W)
 	{
-		ret_val.y += 1;
+		ret_val.z += 1;
 	}
 	if (state.S)
 	{
-		ret_val.y -= 1;
-	}
-	if (state.Q)
-	{
 		ret_val.z -= 1;
 	}
-	if (state.E)
+	if (state.Space)
 	{
-		ret_val.z += 1;
+		ret_val.y -= 1;
+	}
+	if (state.C)
+	{
+		ret_val.y += 1;
 	}
 	return ret_val;
 }
-DirectX::XMFLOAT3 DefaultInput::GetTurn()
+DirectX::XMINT3 DefaultInput::GetTurn()
 {
-	DirectX::XMFLOAT3 ret_val{ 0,0,0 };
-	return ret_val;
+	assert(m_mouse);
+	auto state = m_mouse->GetState();
+	if (state.x != 0 || state.y != 0)
+	{
+		state.x += 1;
+	}
+	int turn_eq = 0;
+	auto key_state = m_keyboard->GetState();
+	if(key_state.Q)
+	{
+		turn_eq -= 1;
+	}
+	else if(key_state.E)
+	{
+		turn_eq += 1;
+	}
+	return {state.x,state.y,turn_eq };
 }
