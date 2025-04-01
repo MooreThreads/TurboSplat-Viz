@@ -4,7 +4,8 @@
 class GSLoader
 {
 private:
-	void BuildBVH(int static_cluster_size=64);
+	void CreateCluster(int static_cluster_size=64);
+	std::vector<uint64_t> GetMortonCode(const std::vector<DirectX::XMFLOAT3>& pos);
 public:
 	std::vector<DirectX::XMFLOAT3> position;
 	std::vector<DirectX::XMFLOAT4> color;

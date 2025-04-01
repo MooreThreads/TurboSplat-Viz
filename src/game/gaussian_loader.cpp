@@ -1,7 +1,9 @@
 #include"gaussian_loader.h"
 #include<fstream>
-#include"bvh.h"
+#include<limits>
+#include <algorithm>
 
+typedef std::numeric_limits< float> flt;
 template<int D>
 struct SHs
 {
@@ -117,32 +119,103 @@ void GSLoader::Load(std::string path, int static_cluster_size)
 		}
 	}
 	buffer.reset();
-	BuildBVH(static_cluster_size);
 
+	CreateCluster();
 
 
 	return;
 }
-
-void GSLoader::BuildBVH(int static_cluster_size)
+std::vector<uint64_t> GSLoader::GetMortonCode(const std::vector<DirectX::XMFLOAT3>& pos)
 {
-	//find global 
-	std::unique_ptr<BVHManager> bvh = std::make_unique<BVHManager>(static_cluster_size);
-	std::vector<AABB> gaussian_aabb;
-	gaussian_aabb.reserve(position.size());
-	for (int i = 0; i < position.size(); i++)
+	//normalize
+	DirectX::XMFLOAT3 min(flt::max(), flt::max(), flt::max());
+	DirectX::XMFLOAT3 max(flt::min(), flt::min(), flt::min());
+	for (const DirectX::XMFLOAT3& point_pos:pos)
 	{
-		gaussian_aabb.emplace_back(AABB{ position[i].x ,position[i].y ,position[i].z ,
-			AABB_extension[i].x,AABB_extension[i].y,AABB_extension[i].z  });
-	}
-	bvh->Build(gaussian_aabb);
+		min.x = std::min(min.x, point_pos.x);
+		min.y = std::min(min.y, point_pos.y);
+		min.z = std::min(min.z, point_pos.z);
 
-	std::vector<AABB> cluster_aabb;
-	bvh->GetCluster(clusters, cluster_aabb);
-	for (const AABB& aabb : cluster_aabb)
+		max.x = std::max(min.x, point_pos.x);
+		max.y = std::max(min.y, point_pos.y);
+		max.z = std::max(min.z, point_pos.z);
+	}
+
+	std::vector<uint64_t> morton_code(pos.size(), 0);
+	constexpr uint32_t max_value_21bit = (1 << 21) - 1;
+	for (int i=0;i<pos.size();i++)
 	{
-		cluster_AABB_origin.emplace_back(DirectX::XMFLOAT3{ aabb.origin[0],aabb.origin[1] ,aabb.origin[2] });
-		cluster_AABB_extension.emplace_back(DirectX::XMFLOAT3{ aabb.extension[0],aabb.extension[1] ,aabb.extension[2] });
+		const DirectX::XMFLOAT3& point_pos = pos[i];
+		DirectX::XMFLOAT3 normalized_pos;
+		normalized_pos.x = (point_pos.x - min.x) / max.x;
+		normalized_pos.y = (point_pos.y - min.y) / max.y;
+		normalized_pos.z = (point_pos.z - min.z) / max.z;
+
+		uint32_t x = static_cast<uint32_t>(std::clamp(normalized_pos.x, 0.0f, 1.0f) * max_value_21bit);
+		uint32_t y = static_cast<uint32_t>(std::clamp(normalized_pos.y, 0.0f, 1.0f) * max_value_21bit);
+		uint32_t z = static_cast<uint32_t>(std::clamp(normalized_pos.z, 0.0f, 1.0f) * max_value_21bit);
+
+		uint64_t code = 0;
+		for (int j = 0; j < 21; ++j) {
+			code |= (uint64_t)((x >> j) & 1) << (3 * j);     
+			code |= (uint64_t)((y >> j) & 1) << (3 * j + 1); 
+			code |= (uint64_t)((z >> j) & 1) << (3 * j + 2); 
+		}
+		morton_code[i] = code;
+	}
+
+	return morton_code;
+}
+void GSLoader::CreateCluster(int static_cluster_size)
+{
+	std::vector<uint64_t> morton_code = GetMortonCode(position);
+
+	//sort index
+	auto comp = [&morton_code](const int& a, const int& b) {
+		if (morton_code[a] < morton_code[b]) return true;
+		else return false;
+		};
+	std::vector<int> morton_index(morton_code.size(), 0);
+	for (int i = 0; i < morton_code.size(); i++)
+	{
+		morton_index[i] = i;
+	}
+	std::sort(morton_index.begin(), morton_index.end(), comp);
+
+	//reindex
+	std::vector<DirectX::XMFLOAT3> position_cpy(position.begin(), position.end());
+	std::vector<DirectX::XMFLOAT4> color_cpy(color.begin(), color.end());
+	std::vector<DirectX::XMFLOAT3X3> cov3d_cpy(cov3d.begin(), cov3d.end());
+	std::vector<DirectX::XMFLOAT3> AABB_extension_cpy(AABB_extension.begin(), AABB_extension.end());
+	for (int i = 0; i < morton_index.size(); i++)
+	{
+		position[i] = position_cpy[morton_index[i]];
+		color[i] = color_cpy[morton_index[i]];
+		cov3d[i] = cov3d_cpy[morton_index[i]];
+		AABB_extension[i] = AABB_extension_cpy[morton_index[i]];
+	}
+
+	int clusters_num = morton_index.size() / static_cluster_size;
+	clusters.clear();
+	cluster_AABB_origin.clear();
+	cluster_AABB_extension.clear();
+	for (int i = 0; i < clusters_num; i++)
+	{
+		std::vector<int> cluster_ele_index(static_cluster_size, 0);
+		DirectX::XMFLOAT3 min{ flt::max(),flt::max(),flt::max() };
+		DirectX::XMFLOAT3 max{ flt::min(),flt::min(),flt::min() };
+		for (int cluster_i = 0; cluster_i < static_cluster_size; cluster_i++)
+		{
+			cluster_ele_index[cluster_i] = i * static_cluster_size + cluster_i;
+			max.x = std::max(max.x, position[i * static_cluster_size].x + AABB_extension[i * static_cluster_size].x);
+			min.x = std::min(max.x, position[i * static_cluster_size].x - AABB_extension[i * static_cluster_size].x);
+			max.y = std::max(max.y, position[i * static_cluster_size].y + AABB_extension[i * static_cluster_size].y);
+			min.y = std::min(max.y, position[i * static_cluster_size].y - AABB_extension[i * static_cluster_size].y);
+			max.z = std::max(max.z, position[i * static_cluster_size].z + AABB_extension[i * static_cluster_size].z);
+			min.z = std::min(max.z, position[i * static_cluster_size].z - AABB_extension[i * static_cluster_size].z);
+		}
+		cluster_AABB_origin.emplace_back(DirectX::XMFLOAT3{ (max.x+min.x)/2.0f,(max.y + min.y) / 2.0f ,(max.z + min.z) / 2.0f });
+		cluster_AABB_extension.emplace_back(DirectX::XMFLOAT3{ (max.x - min.x) / 2.0f,(max.y - min.y) / 2.0f ,(max.z - min.z) / 2.0f });
 	}
 
 }
