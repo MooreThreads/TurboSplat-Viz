@@ -179,42 +179,16 @@ void GaussianPoints::GenProfileData()
 void GaussianPoints::load(std::string path)
 {
 	assert(std::filesystem::exists(path));
-	bool cache_miss = true;
-	if (std::filesystem::exists(path + ".cache"))
-	{
-		auto asset_update_time = std::filesystem::last_write_time(path);
-		auto cache_create_time = std::filesystem::last_write_time(path + ".cache");
-		if (cache_create_time > asset_update_time)
-		{
-			std::vector<uint8_t> bin_data;
-			std::fstream stream(path + ".cache", std::ios_base::binary | std::ios_base::in);
-			stream.seekg(0, std::ios::end);
-			int filesize = stream.tellg();
-			stream.seekg(0, std::ios::beg);
-			bin_data.resize(filesize);
-			stream.read((char*)bin_data.data(), filesize);
-			Deserialization(bin_data);
-			cache_miss = false;
-		}
-	}
+	GSLoader loader;
+	static_cluster_size = 64;
+	loader.Load(path,static_cluster_size);
+	m_vertex_position = loader.position;
+	m_vertex_color = loader.color;
+	m_cov3d = loader.cov3d;
+	m_cluster = loader.clusters;
+	m_cluster_origin = loader.cluster_AABB_origin;
+	m_cluster_extension = loader.cluster_AABB_extension;
 	
-	if(cache_miss)
-	{
-		GSLoader loader;
-		static_cluster_size = 64;
-		loader.Load(path,static_cluster_size);
-		m_vertex_position = loader.position;
-		m_vertex_color = loader.color;
-		m_cov3d = loader.cov3d;
-		m_cluster = loader.clusters;
-		m_cluster_origin = loader.cluster_AABB_origin;
-		m_cluster_extension = loader.cluster_AABB_extension;
-		std::vector<uint8_t> save_data;
-		Serialization(save_data);
-		std::fstream stream(path + ".cache", std::ios_base::binary | std::ios_base::out);
-		stream.write((const char*)save_data.data(), save_data.size());
-		stream.close();
-	}
 	return;
 }
 

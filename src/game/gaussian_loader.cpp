@@ -214,6 +214,7 @@ void GSLoader::CreateCluster(int static_cluster_size)
 			max.z = std::max(max.z, position[i * static_cluster_size].z + AABB_extension[i * static_cluster_size].z);
 			min.z = std::min(max.z, position[i * static_cluster_size].z - AABB_extension[i * static_cluster_size].z);
 		}
+		clusters.emplace_back(cluster_ele_index);
 		cluster_AABB_origin.emplace_back(DirectX::XMFLOAT3{ (max.x+min.x)/2.0f,(max.y + min.y) / 2.0f ,(max.z + min.z) / 2.0f });
 		cluster_AABB_extension.emplace_back(DirectX::XMFLOAT3{ (max.x - min.x) / 2.0f,(max.y - min.y) / 2.0f ,(max.z - min.z) / 2.0f });
 	}
